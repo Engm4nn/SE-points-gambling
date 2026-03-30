@@ -159,12 +159,13 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
     if (!engine) return;
 
     // Spawn ball
-    const offsetX = (Math.random() - 0.5) * 20;
-    const ball = Matter.Bodies.circle(CANVAS_W / 2 + offsetX, 10, BALL_RADIUS, {
-      restitution: 0.5,
-      friction: 0.1,
-      frictionAir: 0.02,
-      density: 0.002,
+    // Randomize position and physics for unique paths
+    const offsetX = (Math.random() - 0.5) * 30;
+    const ball = Matter.Bodies.circle(CANVAS_W / 2 + offsetX, 5 + Math.random() * 10, BALL_RADIUS, {
+      restitution: 0.4 + Math.random() * 0.3,
+      friction: 0.05 + Math.random() * 0.15,
+      frictionAir: 0.01 + Math.random() * 0.02,
+      density: 0.001 + Math.random() * 0.002,
       render: { fillStyle: BALL_COLOR },
       collisionFilter: {
         category: 0x0002,

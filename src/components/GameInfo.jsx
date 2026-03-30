@@ -43,13 +43,13 @@ const INFO = {
   },
   plinko: {
     title: 'Plinko',
-    rtp: '~94-98%',
+    rtp: '95%',
     rows: [
-      ['Low risk', '0.3× – 1.5×'],
-      ['Medium risk', '0.2× – 3×'],
-      ['High risk', '0.2× – 10×'],
+      ['Low risk', '0.5× – 5.6×'],
+      ['Medium risk', '0.4× – 13×'],
+      ['High risk', '0.05× – 29×'],
     ],
-    notes: 'Ball drops through 8 rows of pegs, going left or right 50/50 at each. Higher risk = bigger potential wins but more losses. Multipliers are symmetric.',
+    notes: 'Ball drops through 8 rows of pegs, going left or right at each. Higher risk = bigger edge multipliers but lower center payouts. All risk levels are 95% RTP.',
   },
 };
 
