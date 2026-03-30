@@ -139,9 +139,10 @@ input:focus-visible {
 
 /* ===== APP SHELL ===== */
 .app {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .app-header {
@@ -224,12 +225,13 @@ input:focus-visible {
   background: var(--raised);
 }
 
-/* ===== LAYOUT: stream left, slots+sidebar right ===== */
+/* ===== LAYOUT: stream left, tabs right ===== */
 .app-layout {
   flex: 1;
   display: flex;
   flex-direction: row;
   overflow: hidden;
+  min-height: 0;
 }
 
 .layout-stream {
@@ -245,7 +247,54 @@ input:focus-visible {
   width: 440px;
   min-width: 440px;
   border-left: 1px solid var(--bezel);
+  overflow: hidden;
+}
+
+/* Tab bar */
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--bezel);
+  background: var(--machine);
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-tertiary);
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease-out);
+}
+
+.tab-btn:hover {
+  color: var(--ink-secondary);
+  background: rgba(124, 58, 237, 0.03);
+}
+
+.tab-active {
+  color: var(--phosphor);
+  border-bottom-color: var(--phosphor);
+}
+
+.tab-content {
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
+}
+
+.tab-page {
+  padding: var(--sp-4);
 }
 
 .layout-slots {
@@ -253,15 +302,6 @@ input:focus-visible {
   justify-content: center;
   padding: var(--sp-4);
   background: radial-gradient(ellipse at 50% 30%, rgba(124, 58, 237, 0.04) 0%, transparent 60%);
-}
-
-.layout-sidebar {
-  border-top: 1px solid var(--bezel);
-  display: flex;
-  flex-direction: column;
-  background: var(--machine);
-  flex: 1;
-  overflow-y: auto;
 }
 
 /* ===== TWITCH EMBED ===== */
@@ -946,8 +986,6 @@ input:focus-visible {
 
 /* ===== LEADERBOARD ===== */
 .leaderboard {
-  padding: var(--sp-4);
-  border-bottom: 1px solid var(--bezel);
 }
 
 .leaderboard-header {
@@ -1046,9 +1084,6 @@ input:focus-visible {
 
 /* ===== SPIN HISTORY ===== */
 .spin-history {
-  padding: var(--sp-4);
-  flex: 1;
-  overflow-y: auto;
 }
 
 .spin-history h3 {
@@ -1201,8 +1236,8 @@ input:focus-visible {
   }
 
   .layout-stream {
-    min-height: 300px;
-    max-height: 40vh;
+    min-height: 200px;
+    max-height: 35vh;
   }
 
   .layout-right {
@@ -1210,16 +1245,6 @@ input:focus-visible {
     min-width: auto;
     border-left: none;
     border-top: 1px solid var(--bezel);
-    flex-direction: column;
-  }
-
-  .layout-sidebar {
-    flex-direction: row;
-  }
-
-  .leaderboard,
-  .spin-history {
-    flex: 1;
   }
 
   .reel-container {
@@ -1243,16 +1268,13 @@ input:focus-visible {
 
   .bet-row {
     justify-content: center;
+    flex-wrap: wrap;
   }
 
   .balance-display {
     margin-left: 0;
     width: 100%;
     justify-content: center;
-  }
-
-  .layout-sidebar {
-    flex-direction: column;
   }
 
   .reel-container {

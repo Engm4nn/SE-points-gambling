@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { User, Disc3 } from 'lucide-react';
+import { User, Disc3, Trophy, History } from 'lucide-react';
 import UserLogin from './components/UserLogin';
 import AuthCallback from './components/AuthCallback';
 import SlotMachine from './components/SlotMachine';
@@ -24,6 +24,7 @@ export default function App() {
   const [avatar, setAvatar] = useLocalStorage('se_slots_avatar', '');
   const [balance, setBalance] = useState(0);
   const [loggedIn, setLoggedIn] = useState(false);
+  const [tab, setTab] = useState('slots'); // 'slots' | 'history' | 'leaderboard'
 
   const [leaderboard, setLeaderboard] = useLocalStorage(LS_KEYS.LEADERBOARD, []);
   const [history, setHistory] = useLocalStorage(LS_KEYS.HISTORY, []);
@@ -133,26 +134,58 @@ export default function App() {
                 </div>
 
                 <div className="layout-right">
-                  <div className="layout-slots">
-                    <SlotMachine
-                      balance={balance}
-                      setBalance={setBalance}
-                      username={username}
-                      jackpot={jackpot}
-                      setJackpot={setJackpot}
-                      addHistory={addHistory}
-                      addLeaderboardEntry={addLeaderboardEntry}
-                      showToast={showToast}
-                    />
+                  {/* Tab bar */}
+                  <div className="tab-bar">
+                    <button
+                      className={`tab-btn ${tab === 'slots' ? 'tab-active' : ''}`}
+                      onClick={() => setTab('slots')}
+                    >
+                      <Disc3 size={14} /> Slots
+                    </button>
+                    <button
+                      className={`tab-btn ${tab === 'history' ? 'tab-active' : ''}`}
+                      onClick={() => setTab('history')}
+                    >
+                      <History size={14} /> History
+                    </button>
+                    <button
+                      className={`tab-btn ${tab === 'leaderboard' ? 'tab-active' : ''}`}
+                      onClick={() => setTab('leaderboard')}
+                    >
+                      <Trophy size={14} /> Leaderboard
+                    </button>
                   </div>
 
-                  <div className="layout-sidebar">
-                    <Leaderboard
-                      entries={leaderboard}
-                      onReset={resetLeaderboard}
-                      isStreamer={false}
-                    />
-                    <SpinHistory history={history} />
+                  {/* Tab content */}
+                  <div className="tab-content">
+                    {tab === 'slots' && (
+                      <div className="layout-slots">
+                        <SlotMachine
+                          balance={balance}
+                          setBalance={setBalance}
+                          username={username}
+                          jackpot={jackpot}
+                          setJackpot={setJackpot}
+                          addHistory={addHistory}
+                          addLeaderboardEntry={addLeaderboardEntry}
+                          showToast={showToast}
+                        />
+                      </div>
+                    )}
+                    {tab === 'history' && (
+                      <div className="tab-page">
+                        <SpinHistory history={history} />
+                      </div>
+                    )}
+                    {tab === 'leaderboard' && (
+                      <div className="tab-page">
+                        <Leaderboard
+                          entries={leaderboard}
+                          onReset={resetLeaderboard}
+                          isStreamer={false}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

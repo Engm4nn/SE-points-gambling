@@ -27,10 +27,10 @@ export const WIN_TABLE = [
 export const BET_PRESETS = [1, 10, 100, 1000, 10000];
 export const MIN_BET = 1;
 
-// Bonus
+// Bonus — 5 spins × 2x mult × 0.99 base = 9.9x return on 10x cost (99% RTP)
 export const BONUS_BUY_MULTIPLIER = 10;
-export const BONUS_FREE_SPINS = 10;
-export const BONUS_WIN_MULTIPLIER = 3;
+export const BONUS_FREE_SPINS = 5;
+export const BONUS_WIN_MULTIPLIER = 2;
 export const BONUS_TRIGGER_CHANCE = 0.03; // 3% per reel
 
 // Jackpot
