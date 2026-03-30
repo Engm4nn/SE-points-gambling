@@ -1,3 +1,4 @@
+import { Disc3, Zap } from 'lucide-react';
 import { BET_PRESETS, MAX_BET_PERCENT, MAX_BET_CAP, BONUS_BUY_MULTIPLIER } from '../utils/constants';
 
 export default function BetControls({ bet, setBet, balance, spinning, onSpin, onBonusBuy, bonusMode }) {
@@ -6,7 +7,7 @@ export default function BetControls({ bet, setBet, balance, spinning, onSpin, on
   return (
     <div className="bet-controls">
       <div className="bet-row">
-        <span className="bet-label">BET:</span>
+        <span className="bet-label">Bet:</span>
         <div className="bet-buttons">
           {BET_PRESETS.map(amount => (
             <button
@@ -27,7 +28,7 @@ export default function BetControls({ bet, setBet, balance, spinning, onSpin, on
           </button>
         </div>
         <div className="balance-display">
-          <span className="balance-label">BAL:</span>
+          <span className="balance-label">Bal</span>
           <span className="balance-amount">{balance.toLocaleString()}</span>
           <span className="balance-pts">pts</span>
         </div>
@@ -38,8 +39,9 @@ export default function BetControls({ bet, setBet, balance, spinning, onSpin, on
           className="spin-btn"
           onClick={onSpin}
           disabled={spinning || balance < bet || bonusMode}
+          aria-label="Spin"
         >
-          {spinning ? <span className="spinner" /> : '🎰 SPIN'}
+          {spinning ? <span className="spinner" /> : <><Disc3 size={24} /> SPIN</>}
         </button>
 
         {!bonusMode && (
@@ -48,8 +50,9 @@ export default function BetControls({ bet, setBet, balance, spinning, onSpin, on
             onClick={onBonusBuy}
             disabled={spinning || balance < bet * BONUS_BUY_MULTIPLIER}
             title={`Costs ${(bet * BONUS_BUY_MULTIPLIER).toLocaleString()} pts`}
+            aria-label="Buy bonus"
           >
-            💥 Bonus Buy — {BONUS_BUY_MULTIPLIER}× bet
+            <Zap size={18} /> Bonus Buy — {BONUS_BUY_MULTIPLIER}x
           </button>
         )}
       </div>

@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
+import { Settings, Link, User, Disc3 } from 'lucide-react';
 import SetupPanel from './components/SetupPanel';
 import UserLogin from './components/UserLogin';
 import SlotMachine from './components/SlotMachine';
@@ -13,9 +14,26 @@ import './styles/app.css';
 let historyId = 0;
 let lbId = 0;
 
+// Read channel + JWT from URL params (viewer link) or localStorage (streamer)
+function getConfig() {
+  const params = new URLSearchParams(window.location.search);
+  const urlChannel = params.get('channel') || '';
+  const urlJwt = params.get('token') || '';
+  return { urlChannel, urlJwt };
+}
+
 export default function App() {
-  const [channel, setChannel] = useLocalStorage(LS_KEYS.CHANNEL, '');
-  const [jwt, setJwt] = useLocalStorage(LS_KEYS.JWT, '');
+  const { urlChannel, urlJwt } = useMemo(getConfig, []);
+
+  // localStorage for streamer setup (fallback if no URL params)
+  const [storedChannel, setStoredChannel] = useLocalStorage(LS_KEYS.CHANNEL, '');
+  const [storedJwt, setStoredJwt] = useLocalStorage(LS_KEYS.JWT, '');
+
+  // URL params take priority over localStorage
+  const channel = urlChannel || storedChannel;
+  const jwt = urlJwt || storedJwt;
+  const isViewer = !!(urlChannel && urlJwt); // came via shared link
+
   const [username, setUsername] = useLocalStorage(LS_KEYS.USERNAME, '');
   const [balance, setBalance] = useState(0);
   const [loggedIn, setLoggedIn] = useState(false);
@@ -29,10 +47,26 @@ export default function App() {
   const isSetup = channel && jwt;
 
   const handleSetupSave = useCallback((ch, token) => {
-    setChannel(ch);
-    setJwt(token);
+    setStoredChannel(ch);
+    setStoredJwt(token);
     setShowSetup(false);
-  }, [setChannel, setJwt]);
+  }, [setStoredChannel, setStoredJwt]);
+
+  // Generate the shareable viewer link
+  const viewerLink = useMemo(() => {
+    if (!channel || !jwt) return '';
+    const base = window.location.origin + window.location.pathname;
+    const params = new URLSearchParams({ channel, token: jwt });
+    return `${base}?${params.toString()}`;
+  }, [channel, jwt]);
+
+  const copyViewerLink = useCallback(() => {
+    if (viewerLink) {
+      navigator.clipboard.writeText(viewerLink).then(() => {
+        showToast('Viewer link copied!', 'info');
+      });
+    }
+  }, [viewerLink, showToast]);
 
   const handleLogin = useCallback((user, points) => {
     setUsername(user);
@@ -66,22 +100,26 @@ export default function App() {
     setLeaderboard([]);
   }, [setLeaderboard]);
 
-  // Show setup if not configured
+  // Show setup if not configured and no URL params
   if (!isSetup || showSetup) {
     return (
       <div className="app">
-        <SetupPanel channel={channel} jwt={jwt} onSave={handleSetupSave} />
+        <SetupPanel channel={storedChannel} jwt={storedJwt} onSave={handleSetupSave} />
       </div>
     );
   }
 
-  // Show login if not logged in
+  // Show login — viewer just enters username
   if (!loggedIn) {
     return (
       <div className="app">
         <div className="app-header">
-          <h1 className="app-title">🎰 StreamSlots</h1>
-          <button className="settings-btn" onClick={() => setShowSetup(true)}>⚙️</button>
+          <h1 className="app-title"><Disc3 size={22} /> StreamSlots</h1>
+          {!isViewer && (
+            <button className="settings-btn" onClick={() => setShowSetup(true)} aria-label="Settings">
+              <Settings size={18} />
+            </button>
+          )}
         </div>
         <UserLogin channel={channel} jwt={jwt} onLogin={handleLogin} />
       </div>
@@ -93,10 +131,20 @@ export default function App() {
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       <div className="app-header">
-        <h1 className="app-title">🎰 StreamSlots</h1>
+        <h1 className="app-title"><Disc3 size={22} /> StreamSlots</h1>
         <div className="app-header-right">
-          <span className="header-user">👤 {username}</span>
-          <button className="settings-btn" onClick={() => setShowSetup(true)}>⚙️</button>
+          <span className="header-user"><User size={16} /> {username}</span>
+          {/* Streamer-only: copy viewer link + settings */}
+          {!isViewer && viewerLink && (
+            <button className="copy-link-btn" onClick={copyViewerLink} title="Copy viewer link" aria-label="Copy viewer link">
+              <Link size={16} /> Share
+            </button>
+          )}
+          {!isViewer && (
+            <button className="settings-btn" onClick={() => setShowSetup(true)} aria-label="Settings">
+              <Settings size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -127,7 +175,7 @@ export default function App() {
             <Leaderboard
               entries={leaderboard}
               onReset={resetLeaderboard}
-              isStreamer={true}
+              isStreamer={!isViewer}
             />
             <SpinHistory history={history} />
           </div>

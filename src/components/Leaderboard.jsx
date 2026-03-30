@@ -1,13 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, RotateCcw, Crown, Medal } from 'lucide-react';
 
 export default function Leaderboard({ entries, onReset, isStreamer }) {
   return (
     <div className="leaderboard">
       <div className="leaderboard-header">
-        <h3>🏆 Leaderboard</h3>
+        <h3><Trophy size={16} /> Leaderboard</h3>
         {isStreamer && entries.length > 0 && (
-          <button className="lb-reset-btn" onClick={onReset} title="Reset leaderboard">
-            ↻
+          <button className="lb-reset-btn" onClick={onReset} title="Reset leaderboard" aria-label="Reset leaderboard">
+            <RotateCcw size={14} />
           </button>
         )}
       </div>
@@ -27,7 +28,7 @@ export default function Leaderboard({ entries, onReset, isStreamer }) {
                 transition={{ delay: i * 0.05 }}
               >
                 <span className="lb-rank">
-                  {i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
+                  {i === 0 ? <Crown size={16} style={{ color: '#FBBF24' }} /> : i === 1 ? <Medal size={14} style={{ color: '#94A3B8' }} /> : i === 2 ? <Medal size={14} style={{ color: '#D97706' }} /> : `#${i + 1}`}
                 </span>
                 <span className="lb-user">{entry.username}</span>
                 <span className="lb-amount">+{entry.amount.toLocaleString()}</span>

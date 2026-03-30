@@ -9,6 +9,7 @@ import { spinReels, evaluateWin, isBonusTriggered, isNearMiss } from '../utils/s
 import { deductPoints, addPoints } from '../utils/api';
 import { audio } from '../utils/audio';
 import { sendChatMessage, formatWinMessage, shouldAnnounce } from '../utils/chatBot';
+import { Trophy, Sparkles } from 'lucide-react';
 
 export default function SlotMachine({ balance, setBalance, channel, username, jwt, jackpot, setJackpot, addHistory, addLeaderboardEntry, showToast }) {
   const [spinning, setSpinning] = useState(false);
@@ -184,7 +185,7 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
     <div className="slot-machine">
       {/* Jackpot display */}
       <div className="jackpot-display">
-        <span className="jackpot-icon">🏆</span>
+        <span className="jackpot-icon"><Trophy size={20} /></span>
         <span className="jackpot-label">JACKPOT</span>
         <span className="jackpot-amount">{jackpot.toLocaleString()} pts</span>
       </div>
@@ -212,7 +213,8 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
       {/* Bonus mode indicator */}
       {bonusMode && (
         <div className="bonus-indicator">
-          <span>🃏 FREE SPINS: {bonusSpinsLeft} remaining</span>
+          <Sparkles size={18} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }} />
+          FREE SPINS: {bonusSpinsLeft} remaining
         </div>
       )}
 

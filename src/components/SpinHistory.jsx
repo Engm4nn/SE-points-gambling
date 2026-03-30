@@ -1,16 +1,17 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { History } from 'lucide-react';
 
 export default function SpinHistory({ history }) {
   return (
     <div className="spin-history">
-      <h3>📜 Spin History</h3>
+      <h3><History size={16} /> Spin History</h3>
 
       {history.length === 0 ? (
         <div className="sh-empty">No spins yet</div>
       ) : (
         <div className="sh-list">
           <AnimatePresence initial={false}>
-            {history.map((entry, i) => (
+            {history.map((entry) => (
               <motion.div
                 key={entry.id}
                 className={`sh-entry sh-${entry.type}`}

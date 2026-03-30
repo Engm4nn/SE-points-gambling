@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Settings, Key, Tv } from 'lucide-react';
 
 export default function SetupPanel({ channel, jwt, onSave }) {
   const [ch, setCh] = useState(channel || '');
@@ -19,15 +20,17 @@ export default function SetupPanel({ channel, jwt, onSave }) {
     <div className="setup-overlay">
       <form className="setup-panel" onSubmit={handleSubmit}>
         <h2 className="setup-title">
-          <span className="setup-icon">⚙️</span> Streamer Setup
+          <Settings size={24} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} />
+          Streamer Setup
         </h2>
         <p className="setup-desc">
           Connect your StreamElements account to enable point gambling.
         </p>
 
-        <label className="setup-label">
-          Channel Name
+        <label className="setup-label" htmlFor="channel-input">
+          <Tv size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> Channel Name
           <input
+            id="channel-input"
             type="text"
             value={ch}
             onChange={e => setCh(e.target.value)}
@@ -37,9 +40,10 @@ export default function SetupPanel({ channel, jwt, onSave }) {
           />
         </label>
 
-        <label className="setup-label">
-          SE JWT Token
+        <label className="setup-label" htmlFor="jwt-input">
+          <Key size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> SE JWT Token
           <input
+            id="jwt-input"
             type="password"
             value={token}
             onChange={e => setToken(e.target.value)}

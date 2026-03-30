@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Disc3, User } from 'lucide-react';
 import { fetchPoints } from '../utils/api';
 
 export default function UserLogin({ channel, jwt, onLogin }) {
@@ -17,7 +18,7 @@ export default function UserLogin({ channel, jwt, onLogin }) {
       const points = await fetchPoints(channel, username.trim().toLowerCase(), jwt);
       onLogin(username.trim().toLowerCase(), points);
     } catch (err) {
-      setError('Could not fetch points. Check username and JWT.');
+      setError('Could not fetch points. Check your username is correct.');
     } finally {
       setLoading(false);
     }
@@ -26,14 +27,15 @@ export default function UserLogin({ channel, jwt, onLogin }) {
   return (
     <div className="login-overlay">
       <form className="login-panel" onSubmit={handleSubmit}>
-        <h2 className="login-title">🎰 StreamSlots</h2>
+        <h2 className="login-title"><Disc3 size={28} style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }} /> StreamSlots</h2>
         <p className="login-desc">
           Enter your Twitch username to start gambling with SE points.
         </p>
 
-        <label className="setup-label">
-          Twitch Username
+        <label className="setup-label" htmlFor="username-input">
+          <User size={14} style={{ display: 'inline', verticalAlign: 'middle' }} /> Twitch Username
           <input
+            id="username-input"
             type="text"
             value={username}
             onChange={e => setUsername(e.target.value)}
