@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { audio } from '../utils/audio';
-import { Bomb, Gem, Lock } from 'lucide-react';
+import { Bomb, Lock } from 'lucide-react';
 
 // 12 vaults: 6 values + 6 traps
-// First 2 picks are GUARANTEED safe (shuffled among values only)
-// Then remaining 4 values + 6 traps are shuffled
+// First 2 picks are GUARANTEED safe — if player clicks a trap,
+// it gets swapped with an unrevealed value vault behind the scenes.
 // RTP: ~94% with 10x bet cost, avg ~2.8 picks before trap
 const VALUES = [1, 1, 2, 3, 5, 10];
 const TRAP_COUNT = 6;
@@ -13,23 +13,16 @@ const GUARANTEED_SAFE = 2;
 const VAULT_COUNT = VALUES.length + TRAP_COUNT;
 
 function generateVaults() {
-  // Shuffle all values
-  const shuffledValues = [...VALUES].sort(() => Math.random() - 0.5);
-
-  // First GUARANTEED_SAFE are safe values
-  const guaranteed = shuffledValues.slice(0, GUARANTEED_SAFE).map(v => ({ type: 'value', amount: v }));
-
-  // Remaining values + all traps, shuffled together
-  const rest = [
-    ...shuffledValues.slice(GUARANTEED_SAFE).map(v => ({ type: 'value', amount: v })),
+  const vaults = [
+    ...VALUES.map(v => ({ type: 'value', amount: v })),
     ...Array(TRAP_COUNT).fill(null).map(() => ({ type: 'trap', amount: 0 })),
   ];
-  for (let i = rest.length - 1; i > 0; i--) {
+  // Fisher-Yates shuffle
+  for (let i = vaults.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [rest[i], rest[j]] = [rest[j], rest[i]];
+    [vaults[i], vaults[j]] = [vaults[j], vaults[i]];
   }
-
-  return [...guaranteed, ...rest];
+  return vaults;
 }
 
 export default function VaultHeist({ bet, onComplete }) {
@@ -39,14 +32,35 @@ export default function VaultHeist({ bet, onComplete }) {
   const [hitTrap, setHitTrap] = useState(null);
   const [done, setDone] = useState(false);
   const [lastOpened, setLastOpened] = useState(null);
+  const pickCount = useRef(0);
 
   const payout = Math.floor(bet * total);
-  const allValuesFound = opened.size - (hitTrap !== null ? 0 : 0) >= VALUES.length;
 
   const handleOpen = useCallback((index) => {
     if (done || opened.has(index)) return;
 
-    const vault = vaults[index];
+    let currentVaults = [...vaults];
+    let vault = currentVaults[index];
+
+    // Guaranteed safe: if within first 2 picks and they hit a trap,
+    // swap it with a random unrevealed value vault
+    if (pickCount.current < GUARANTEED_SAFE && vault.type === 'trap') {
+      // Find an unrevealed value vault to swap with
+      const swapCandidates = currentVaults
+        .map((v, idx) => ({ v, idx }))
+        .filter(({ v, idx }) => v.type === 'value' && !opened.has(idx) && idx !== index);
+
+      if (swapCandidates.length > 0) {
+        const swapTarget = swapCandidates[Math.floor(Math.random() * swapCandidates.length)];
+        // Swap contents
+        currentVaults[index] = swapTarget.v;
+        currentVaults[swapTarget.idx] = vault;
+        setVaults(currentVaults);
+        vault = currentVaults[index]; // now it's a value
+      }
+    }
+
+    pickCount.current += 1;
     const newOpened = new Set(opened);
     newOpened.add(index);
     setOpened(newOpened);
@@ -56,7 +70,6 @@ export default function VaultHeist({ bet, onComplete }) {
       setHitTrap(index);
       setDone(true);
       audio.loss();
-      // Finish with whatever was collected
       setTimeout(() => {
         onComplete(total);
       }, 2000);
@@ -66,7 +79,7 @@ export default function VaultHeist({ bet, onComplete }) {
       audio.cardDeal();
 
       // Check if all values found
-      const valuesOpened = [...newOpened].filter(i => vaults[i].type === 'value').length;
+      const valuesOpened = [...newOpened].filter(i => currentVaults[i].type === 'value').length;
       if (valuesOpened >= VALUES.length) {
         setDone(true);
         audio.bonus();
@@ -77,15 +90,18 @@ export default function VaultHeist({ bet, onComplete }) {
     }
   }, [done, opened, vaults, total, onComplete]);
 
+  const safePicks = Math.max(0, GUARANTEED_SAFE - pickCount.current);
+
   return (
     <div className="vh-overlay">
       <div className="vh-content">
         <h2 className="vh-title">VAULT HEIST</h2>
         <p className="vh-subtitle">
-          First 2 picks are safe! Then watch out for {TRAP_COUNT} traps.
+          {safePicks > 0
+            ? `${safePicks} safe pick${safePicks > 1 ? 's' : ''} remaining! Then watch out for traps.`
+            : `${TRAP_COUNT} traps hidden among the remaining vaults!`}
         </p>
 
-        {/* Running total */}
         <div className="vh-total">
           <span className="vh-total-label">Total</span>
           <motion.span
@@ -99,7 +115,6 @@ export default function VaultHeist({ bet, onComplete }) {
           <span className="vh-total-payout">= {payout.toLocaleString()} pts</span>
         </div>
 
-        {/* Vault grid: 4x3 */}
         <div className="vh-grid">
           {vaults.map((vault, i) => {
             const isOpened = opened.has(i);
@@ -114,7 +129,6 @@ export default function VaultHeist({ bet, onComplete }) {
                 onClick={() => !done && handleOpen(i)}
                 disabled={isOpened || done}
                 whileTap={!isOpened && !done ? { scale: 0.9 } : {}}
-                layout
               >
                 {!isOpened && <Lock size={20} />}
                 {isTrap && <Bomb size={20} />}
@@ -126,7 +140,6 @@ export default function VaultHeist({ bet, onComplete }) {
           })}
         </div>
 
-        {/* Status */}
         {done && (
           <motion.div
             className={`vh-result ${hitTrap !== null ? 'vh-result-trap' : 'vh-result-clear'}`}
@@ -142,7 +155,7 @@ export default function VaultHeist({ bet, onComplete }) {
         )}
 
         <p className="vh-hint">
-          {done ? 'Returning to slots...' : `${VALUES.length - [...opened].filter(i => vaults[i].type === 'value').length} values left · ${TRAP_COUNT - (hitTrap !== null ? 1 : 0)} traps hidden`}
+          {done ? 'Returning to slots...' : `${VALUES.length - [...opened].filter(i => vaults[i].type === 'value').length} values left`}
         </p>
       </div>
     </div>
