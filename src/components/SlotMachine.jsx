@@ -23,13 +23,23 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
   const [bonusMultiplier, setBonusMultiplier] = useState(1);
   const [showWheel, setShowWheel] = useState(false);
   const [nearMiss, setNearMiss] = useState(false);
+  const [autoSpin, setAutoSpin] = useState(false);
+  const [turbo, setTurbo] = useState(false);
   const stoppedReels = useRef(0);
   const currentResults = useRef([]);
+  const autoSpinRef = useRef(false);
   const broadcastChannel = useRef(
     typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('streamslots_wins') : null
   );
 
-  const canSpin = !spinning && (bonusMode ? bonusSpinsLeft > 0 : balance >= bet);
+  // Keep ref in sync so callbacks see latest value
+  autoSpinRef.current = autoSpin;
+
+  const canSpin = !spinning && !showWheel && (bonusMode ? bonusSpinsLeft > 0 : balance >= bet);
+
+  // Turbo timing
+  const spinBase = turbo ? 500 : SPIN_DURATION_BASE;
+  const spinStagger = turbo ? 100 : SPIN_STAGGER;
 
   const handleSpin = useCallback(async (isBonusBuy = false) => {
     if (spinning) return;
@@ -39,6 +49,7 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
     if (!bonusMode && balance < actualBet) {
       showToast('Not enough points!', 'error');
+      setAutoSpin(false);
       return;
     }
 
@@ -61,6 +72,7 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
       } catch {
         setBalance(prev => prev + actualBet);
         setSpinning(false);
+        setAutoSpin(false);
         showToast('API error — bet refunded', 'error');
         return;
       }
@@ -76,7 +88,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     }
   }, [spinning, bet, balance, username, showToast, setBalance, bonusMode]);
 
-  // Wheel result callback
   const handleWheelResult = useCallback((multiplier) => {
     setBonusMultiplier(multiplier);
     setShowWheel(false);
@@ -94,17 +105,16 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
       const res = currentResults.current;
 
-      // Check bonus trigger — show wheel
+      // Bonus trigger → wheel
       if (isBonusTriggered(res)) {
         audio.bonus();
+        setAutoSpin(false); // pause autospin for wheel
         setShowWheel(true);
         return;
       }
 
-      // Evaluate win
       const winResult = evaluateWin(res, bet, jackpot);
 
-      // Apply bonus multiplier from wheel
       if (bonusMode && winResult.winAmount > 0) {
         winResult.winAmount = Math.floor(winResult.winAmount * bonusMultiplier);
         winResult.label += ` (${bonusMultiplier}x Bonus)`;
@@ -172,6 +182,28 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     handleSpin(true);
   }, [handleSpin]);
 
+  // Autospin: trigger next spin after current one finishes
+  useEffect(() => {
+    if (!autoSpinRef.current || spinning || showWheel) return;
+
+    // Check if we can still spin
+    const canAutoSpin = bonusMode ? bonusSpinsLeft > 0 : balance >= bet;
+    if (!canAutoSpin) {
+      setAutoSpin(false);
+      return;
+    }
+
+    const delay = turbo ? 200 : 600;
+    const timer = setTimeout(() => {
+      if (autoSpinRef.current) {
+        handleSpin();
+      }
+    }, delay);
+
+    return () => clearTimeout(timer);
+  }, [spinning, autoSpin, showWheel, bonusMode, bonusSpinsLeft, balance, bet, turbo, handleSpin]);
+
+  // Keyboard
   useEffect(() => {
     const handler = (e) => {
       if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
@@ -198,7 +230,7 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
             reelIndex={i}
             spinning={spinning}
             targetSymbol={results[i]}
-            delay={SPIN_DURATION_BASE + i * SPIN_STAGGER}
+            delay={spinBase + i * spinStagger}
             onStop={handleReelStop}
             bonusMode={bonusMode}
           />
@@ -224,9 +256,12 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
         onSpin={() => handleSpin(false)}
         onBonusBuy={handleBonusBuy}
         bonusMode={bonusMode}
+        autoSpin={autoSpin}
+        onAutoSpinToggle={() => setAutoSpin(prev => !prev)}
+        turbo={turbo}
+        onTurboToggle={() => setTurbo(prev => !prev)}
       />
 
-      {/* Bonus wheel overlay */}
       <AnimatePresence>
         {showWheel && (
           <BonusWheel onResult={handleWheelResult} />

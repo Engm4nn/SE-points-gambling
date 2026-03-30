@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Disc3, Zap } from 'lucide-react';
+import { Disc3, Zap, Play, FastForward } from 'lucide-react';
 import { BET_PRESETS, MIN_BET, BONUS_BUY_MULTIPLIER } from '../utils/constants';
 
-export default function BetControls({ bet, setBet, balance, spinning, onSpin, onBonusBuy, bonusMode }) {
+export default function BetControls({
+  bet, setBet, balance, spinning, onSpin, onBonusBuy, bonusMode,
+  autoSpin, onAutoSpinToggle, turbo, onTurboToggle,
+}) {
   const [customBet, setCustomBet] = useState('');
 
   const handleCustomBet = (e) => {
@@ -92,6 +95,24 @@ export default function BetControls({ bet, setBet, balance, spinning, onSpin, on
             <Zap size={16} /> Bonus {BONUS_BUY_MULTIPLIER}x
           </button>
         )}
+      </div>
+
+      {/* Autospin + Turbo row */}
+      <div className="spin-options-row">
+        <button
+          className={`option-btn ${autoSpin ? 'option-active' : ''}`}
+          onClick={onAutoSpinToggle}
+          title={autoSpin ? 'Stop autospin' : 'Start autospin'}
+        >
+          <Play size={14} /> {autoSpin ? 'STOP' : 'AUTO'}
+        </button>
+        <button
+          className={`option-btn ${turbo ? 'option-active' : ''}`}
+          onClick={onTurboToggle}
+          title={turbo ? 'Normal speed' : 'Turbo speed'}
+        >
+          <FastForward size={14} /> TURBO
+        </button>
       </div>
     </div>
   );

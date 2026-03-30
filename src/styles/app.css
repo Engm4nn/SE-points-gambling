@@ -853,6 +853,46 @@ input:focus-visible {
   cursor: not-allowed;
 }
 
+/* Autospin + Turbo */
+.spin-options-row {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.option-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--panel);
+  border: 1px solid var(--bezel);
+  border-radius: var(--r-md);
+  color: var(--ink-tertiary);
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease-out);
+}
+
+.option-btn:hover {
+  border-color: var(--phosphor);
+  color: var(--ink-secondary);
+}
+
+.option-active {
+  background: var(--phosphor);
+  border-color: var(--phosphor);
+  color: #fff;
+}
+
+.option-active:hover {
+  background: var(--phosphor-dim);
+  color: #fff;
+}
+
 /* ===== WIN DISPLAY ===== */
 .win-display {
   text-align: center;
