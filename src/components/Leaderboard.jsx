@@ -1,10 +1,13 @@
-import { Crown, Medal } from 'lucide-react';
+import { Crown, Medal, RefreshCw } from 'lucide-react';
 
-export default function Leaderboard({ entries }) {
+export default function Leaderboard({ entries, onRefresh, refreshing }) {
   return (
     <div className="leaderboard">
       <div className="leaderboard-header">
         <h3>Top Wagerers</h3>
+        <button className="refresh-bal-btn" onClick={onRefresh} disabled={refreshing} title="Refresh leaderboard" aria-label="Refresh leaderboard">
+          <RefreshCw size={14} className={refreshing ? 'spin-icon' : ''} />
+        </button>
       </div>
 
       {entries.length === 0 ? (

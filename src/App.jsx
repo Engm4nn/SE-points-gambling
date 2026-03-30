@@ -28,6 +28,7 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [tab, setTab] = useState('slots');
   const [showDeposit, setShowDeposit] = useState(false);
+  const [lbRefreshing, setLbRefreshing] = useState(false);
 
   const [leaderboard, setLeaderboard] = useState([]);
   const [history, setHistory] = useLocalStorage(LS_KEYS.HISTORY, []);
@@ -80,6 +81,15 @@ export default function App() {
     setBalance(points);
     setLoggedIn(true);
   }, [setUsername, setDisplayName, setAvatar]);
+
+  const refreshLeaderboard = useCallback(async () => {
+    setLbRefreshing(true);
+    try {
+      const data = await fetchLeaderboard('top3', 10);
+      setLeaderboard(data);
+    } catch {}
+    setLbRefreshing(false);
+  }, []);
 
   const addHistory = useCallback((symbols, net, type) => {
     const entry = { id: ++historyId, symbols, net, type, timestamp: Date.now() };
@@ -207,7 +217,7 @@ export default function App() {
                     )}
                     {tab === 'leaderboard' && (
                       <div className="tab-page">
-                        <Leaderboard entries={leaderboard} />
+                        <Leaderboard entries={leaderboard} onRefresh={refreshLeaderboard} refreshing={lbRefreshing} />
                       </div>
                     )}
                   </div>
