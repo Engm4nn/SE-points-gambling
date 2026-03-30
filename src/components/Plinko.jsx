@@ -1,99 +1,36 @@
-import { useState, useCallback, useRef } from 'react';
-import { motion, animate } from 'framer-motion';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import Matter from 'matter-js';
 import { deductPoints, addPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
-import { simulateDrop, getMultiplier, RISK_LEVELS, ROWS } from '../utils/plinkoLogic';
+import { getMultiplier, RISK_LEVELS, ROWS } from '../utils/plinkoLogic';
 import { MIN_BET } from '../utils/constants';
+import { audio } from '../utils/audio';
 
 const RISK_OPTIONS = ['low', 'medium', 'high'];
 const BET_PRESETS = [10, 100, 1000, 5000];
 
-const BOARD_WIDTH = 380;
-const BOARD_HEIGHT = 340;
-const PEG_SIZE = 6;
-const BALL_SIZE = 12;
+// Board dimensions
+const CANVAS_W = 400;
+const CANVAS_H = 420;
+const PIN_RADIUS = 4;
+const BALL_RADIUS = 7;
+const BIN_COUNT = ROWS + 1; // 9 bins for 8 rows
 
-// Row i has (3 + i) pegs, starting at row 0 with 3 pegs, up to row 7 with 10 pegs
-function getPegPositions() {
-  const rows = [];
-  for (let r = 0; r < ROWS; r++) {
-    const count = 3 + r;
-    const rowY = ((r + 1) / (ROWS + 1)) * BOARD_HEIGHT;
-    const pegs = [];
-    for (let p = 0; p < count; p++) {
-      const rowWidth = (count - 1) * (BOARD_WIDTH / 10);
-      const startX = (BOARD_WIDTH - rowWidth) / 2;
-      pegs.push({ x: startX + p * (BOARD_WIDTH / 10), y: rowY });
-    }
-    rows.push(pegs);
-  }
-  return rows;
-}
+// Colors
+const VOID = '#0B0B1A';
+const PIN_COLOR = '#3D4466';
+const BALL_COLOR = '#FBBF24';
+const WALL_COLOR = '#18183A';
 
-const pegRows = getPegPositions();
-
-// Compute ball positions for each step of the path
-function computeBallTrajectory(path) {
-  const positions = [];
-  // Start position: top center
-  positions.push({ x: BOARD_WIDTH / 2, y: 0 });
-
-  for (let r = 0; r < path.length; r++) {
-    const row = pegRows[r];
-    // Ball enters from the "gap" perspective. At row r, there are (3+r) pegs.
-    // The ball position between pegs is tracked by an index.
-    // We track it as: cumulative right-turns gives us which gap we're in.
-    // After r rows, the ball has bounced r times — the number of rights = slotSoFar
-    let slotSoFar = 0;
-    for (let i = 0; i <= r; i++) {
-      slotSoFar += path[i];
-    }
-
-    // The ball lands between peg slotSoFar and slotSoFar+1 in row r
-    // But we want to show it hitting a peg first, then deflecting.
-    // Position at the peg it hits in this row:
-    // At row r there are (3+r) pegs. The ball approaches from one of (2+r) gaps.
-    // After bouncing, it goes left or right.
-    // Simple approach: ball x after row r is interpolated between the row's pegs
-    const pegsInRow = row.length; // 3+r
-    // slotSoFar is the cumulative rights after row r+1 conceptually.
-    // Actually, let's recalc: after processing row r, rights_so_far tells us our horizontal bucket.
-    // The ball's x should be between peg[rights_so_far] and peg[rights_so_far] position area.
-    const rightsSoFar = path.slice(0, r + 1).reduce((a, b) => a + b, 0);
-    // Map to x: in row r there are (3+r) pegs, and (4+r) = (3+r+1) gaps essentially...
-    // The slot index after all rows maps to 0..8. At intermediate rows, the ball is at
-    // an intermediate position. Let's use the peg positions directly:
-    // The ball is between peg[rightsSoFar] (if it exists) — actually the ball
-    // after bouncing off row r is at the midpoint between peg[rightsSoFar] and peg[rightsSoFar+1]
-    // in the NEXT row's frame. But for animation, let's position at the peg it bounced off of.
-    // We'll just interpolate linearly across the board width based on rightsSoFar / ROWS.
-    const fraction = rightsSoFar / ROWS;
-    // Map to slot width range: slots are at the bottom spanning board width
-    const slotAreaStart = BOARD_WIDTH * 0.05;
-    const slotAreaEnd = BOARD_WIDTH * 0.95;
-    const x = slotAreaStart + fraction * (slotAreaEnd - slotAreaStart);
-    const y = row[0].y + PEG_SIZE;
-
-    positions.push({ x, y });
-  }
-
-  // Final: drop to the bottom
-  const finalRights = path.reduce((a, b) => a + b, 0);
-  const fraction = finalRights / ROWS;
-  const slotAreaStart = BOARD_WIDTH * 0.05;
-  const slotAreaEnd = BOARD_WIDTH * 0.95;
-  positions.push({
-    x: slotAreaStart + fraction * (slotAreaEnd - slotAreaStart),
-    y: BOARD_HEIGHT + 10,
-  });
-
-  return positions;
-}
-
-function getSlotColor(multiplier) {
-  if (multiplier >= 5) return 'var(--signal-go)';
-  if (multiplier >= 1) return 'var(--discharge)';
-  return 'var(--signal-stop)';
+// Bin colors: red edges, yellow center
+function getBinColor(index) {
+  const dist = Math.abs(index - Math.floor(BIN_COUNT / 2));
+  const maxDist = Math.floor(BIN_COUNT / 2);
+  const t = dist / maxDist;
+  // Interpolate from green (center) to red (edges)
+  if (t < 0.3) return '#34D399';
+  if (t < 0.6) return '#FBBF24';
+  return '#F43F5E';
 }
 
 export default function Plinko({ balance, setBalance, username, showToast, addHistory }) {
@@ -101,12 +38,225 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
   const [bet, setBet] = useState(10);
   const [customBet, setCustomBet] = useState('');
   const [dropping, setDropping] = useState(false);
-  const [ballPos, setBallPos] = useState(null);
-  const [winSlot, setWinSlot] = useState(null);
   const [lastResult, setLastResult] = useState(null);
-  const ballRef = useRef(null);
+  const canvasRef = useRef(null);
+  const engineRef = useRef(null);
+  const renderRef = useRef(null);
+  const runnerRef = useRef(null);
+  const pinsLastRowX = useRef([]);
+  const activeBalls = useRef(0);
 
-  const multipliers = RISK_LEVELS[risk];
+  // Initialize Matter.js engine and renderer
+  useEffect(() => {
+    const engine = Matter.Engine.create({
+      gravity: { x: 0, y: 1.2 },
+    });
+    engineRef.current = engine;
+
+    const render = Matter.Render.create({
+      canvas: canvasRef.current,
+      engine: engine,
+      options: {
+        width: CANVAS_W,
+        height: CANVAS_H,
+        wireframes: false,
+        background: VOID,
+        pixelRatio: window.devicePixelRatio || 1,
+      },
+    });
+    renderRef.current = render;
+
+    // Create pins
+    const pins = [];
+    const pinSpacingX = CANVAS_W / (ROWS + 2);
+    const pinSpacingY = (CANVAS_H - 80) / (ROWS + 1);
+    const startY = 40;
+
+    for (let row = 0; row < ROWS; row++) {
+      const pinCount = 3 + row;
+      const rowWidth = (pinCount - 1) * pinSpacingX;
+      const offsetX = (CANVAS_W - rowWidth) / 2;
+      const y = startY + (row + 1) * pinSpacingY;
+
+      for (let col = 0; col < pinCount; col++) {
+        const x = offsetX + col * pinSpacingX;
+        const pin = Matter.Bodies.circle(x, y, PIN_RADIUS, {
+          isStatic: true,
+          render: { fillStyle: PIN_COLOR },
+          restitution: 0.5,
+          friction: 0.1,
+          collisionFilter: { category: 0x0001 },
+        });
+        pins.push(pin);
+
+        // Track last row x positions for bin detection
+        if (row === ROWS - 1) {
+          pinsLastRowX.current.push(x);
+        }
+      }
+    }
+
+    // Walls (angled to guide balls)
+    const wallThickness = 20;
+    const leftWall = Matter.Bodies.rectangle(-wallThickness / 2, CANVAS_H / 2, wallThickness, CANVAS_H, {
+      isStatic: true,
+      render: { fillStyle: WALL_COLOR },
+    });
+    const rightWall = Matter.Bodies.rectangle(CANVAS_W + wallThickness / 2, CANVAS_H / 2, wallThickness, CANVAS_H, {
+      isStatic: true,
+      render: { fillStyle: WALL_COLOR },
+    });
+
+    // Bottom sensor to detect ball landing
+    const bottomSensor = Matter.Bodies.rectangle(CANVAS_W / 2, CANVAS_H + 10, CANVAS_W, 20, {
+      isStatic: true,
+      isSensor: true,
+      render: { visible: false },
+      label: 'bottomSensor',
+    });
+
+    Matter.Composite.add(engine.world, [...pins, leftWall, rightWall, bottomSensor]);
+
+    // Draw bin labels on canvas after each render
+    Matter.Events.on(render, 'afterRender', () => {
+      const ctx = render.context;
+      const binWidth = CANVAS_W / BIN_COUNT;
+      const binY = CANVAS_H - 30;
+
+      for (let i = 0; i < BIN_COUNT; i++) {
+        const x = i * binWidth + binWidth / 2;
+        const color = getBinColor(i);
+
+        // Bin background
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.2;
+        ctx.fillRect(i * binWidth + 2, binY, binWidth - 4, 28);
+        ctx.globalAlpha = 1;
+
+        // Bin border
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(i * binWidth + 2, binY, binWidth - 4, 28);
+
+        // Multiplier text
+        const mults = RISK_LEVELS[risk] || RISK_LEVELS.medium;
+        ctx.fillStyle = color;
+        ctx.font = 'bold 10px "Chakra Petch", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${mults[i]}x`, x, binY + 14);
+      }
+    });
+
+    const runner = Matter.Runner.create();
+    runnerRef.current = runner;
+    Matter.Render.run(render);
+    Matter.Runner.run(runner, engine);
+
+    return () => {
+      Matter.Render.stop(render);
+      Matter.Runner.stop(runner);
+      Matter.Engine.clear(engine);
+    };
+  }, [risk]);
+
+  const determineBin = useCallback((ballX) => {
+    const binWidth = CANVAS_W / BIN_COUNT;
+    let bin = Math.floor(ballX / binWidth);
+    bin = Math.max(0, Math.min(BIN_COUNT - 1, bin));
+    return bin;
+  }, []);
+
+  const handleDrop = useCallback(async () => {
+    if (dropping || balance < bet) return;
+    await audio.ensure();
+
+    setDropping(true);
+    setLastResult(null);
+    setBalance(prev => prev - bet);
+
+    try {
+      await deductPoints(username, bet);
+    } catch {
+      setBalance(prev => prev + bet);
+      setDropping(false);
+      showToast('API error — bet refunded', 'error');
+      return;
+    }
+
+    const engine = engineRef.current;
+    if (!engine) { setDropping(false); return; }
+
+    // Create ball with slight random offset
+    const offsetX = (Math.random() - 0.5) * 20;
+    const ball = Matter.Bodies.circle(CANVAS_W / 2 + offsetX, 10, BALL_RADIUS, {
+      restitution: 0.5,
+      friction: 0.1,
+      frictionAir: 0.02,
+      density: 0.002,
+      render: { fillStyle: BALL_COLOR },
+      collisionFilter: {
+        category: 0x0002,
+        mask: 0x0001, // Only collide with pins, not other balls
+      },
+    });
+
+    activeBalls.current += 1;
+    Matter.Composite.add(engine.world, ball);
+
+    // Collision sound on pin hits
+    const collisionHandler = (event) => {
+      for (const pair of event.pairs) {
+        if (pair.bodyA === ball || pair.bodyB === ball) {
+          audio.plinkoHit();
+        }
+      }
+    };
+    Matter.Events.on(engine, 'collisionStart', collisionHandler);
+
+    // Check when ball reaches bottom
+    const checkInterval = setInterval(() => {
+      if (ball.position.y > CANVAS_H - 40) {
+        clearInterval(checkInterval);
+        Matter.Events.off(engine, 'collisionStart', collisionHandler);
+
+        const binIndex = determineBin(ball.position.x);
+        const multiplier = getMultiplier(binIndex, risk);
+        const payout = Math.floor(bet * multiplier);
+
+        // Remove ball after short delay
+        setTimeout(() => {
+          Matter.Composite.remove(engine.world, ball);
+          activeBalls.current -= 1;
+        }, 500);
+
+        // Process result
+        if (payout > 0) {
+          setBalance(prev => prev + payout);
+          addPoints(username, payout).catch(() => {});
+        }
+
+        const net = payout - bet;
+        setLastResult({ multiplier, payout, net, binIndex });
+        reportSpin(username, bet, payout);
+        addHistory(
+          [{ emoji: `${multiplier}x` }],
+          net,
+          net >= 0 ? 'win' : 'loss',
+          'plinko'
+        );
+
+        if (net > 0) {
+          audio.plinkoWin();
+          showToast(`${multiplier}x — +${net.toLocaleString()} pts`, 'win');
+        } else if (net < 0) {
+          showToast(`${multiplier}x — ${net.toLocaleString()} pts`, 'error');
+        }
+
+        setDropping(false);
+      }
+    }, 50);
+  }, [dropping, balance, bet, username, risk, setBalance, showToast, addHistory, determineBin]);
 
   const handleCustomBet = (e) => {
     const val = e.target.value.replace(/[^0-9]/g, '');
@@ -120,104 +270,15 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
     setCustomBet('');
   };
 
-  const handleDrop = useCallback(async () => {
-    if (dropping) return;
-    if (bet < MIN_BET) {
-      showToast(`Minimum bet is ${MIN_BET}`, 'error');
-      return;
-    }
-    if (balance < bet) {
-      showToast('Not enough points!', 'error');
-      return;
-    }
-
-    setDropping(true);
-    setWinSlot(null);
-    setLastResult(null);
-    setBalance(prev => prev - bet);
-
-    // Deduct points via API
-    try {
-      await deductPoints(username, bet);
-    } catch {
-      setBalance(prev => prev + bet);
-      setDropping(false);
-      showToast('API error — bet refunded', 'error');
-      return;
-    }
-
-    // Simulate the drop
-    const { path, slotIndex } = simulateDrop(ROWS);
-    const multiplier = getMultiplier(slotIndex, risk);
-    const payout = Math.floor(bet * multiplier);
-    const net = payout - bet;
-
-    // Compute trajectory positions
-    const trajectory = computeBallTrajectory(path);
-
-    // Animate ball through the trajectory
-    const xKeyframes = trajectory.map(p => p.x - BALL_SIZE / 2);
-    const yKeyframes = trajectory.map(p => p.y - BALL_SIZE / 2);
-    const totalSteps = trajectory.length;
-    // Build times array (evenly spaced)
-    const times = trajectory.map((_, i) => i / (totalSteps - 1));
-
-    setBallPos({ x: xKeyframes[0], y: yKeyframes[0] });
-
-    // Use framer-motion animate on the ball element
-    const ballEl = ballRef.current;
-    if (ballEl) {
-      await Promise.all([
-        animate(ballEl, { x: xKeyframes, y: yKeyframes }, {
-          duration: 1.5,
-          ease: 'easeIn',
-          times,
-        }),
-      ]);
-    }
-
-    // Highlight winning slot
-    setWinSlot(slotIndex);
-
-    // Pay out winnings
-    if (payout > 0) {
-      setBalance(prev => prev + payout);
-      try {
-        await addPoints(username, payout);
-      } catch {}
-    }
-
-    // Report to leaderboard
-    reportSpin(username, bet, payout);
-
-    // Add to history
-    const type = net > 0 ? 'win' : 'loss';
-    addHistory([{ emoji: multiplier + 'x' }], net, type);
-
-    setLastResult({ multiplier, payout, net });
-
-    if (net > 0) {
-      showToast(`+${payout.toLocaleString()} pts (${multiplier}x)`, 'win');
-    } else if (net === 0) {
-      showToast(`Push — ${multiplier}x`, 'info');
-    }
-
-    setDropping(false);
-  }, [dropping, bet, balance, username, risk, setBalance, showToast, addHistory]);
-
   return (
-    <div style={styles.container}>
+    <div className="plinko-game">
       {/* Risk selector */}
-      <div style={styles.section}>
-        <span style={styles.label}>Risk</span>
-        <div style={styles.toggleRow}>
+      <div className="pk-controls">
+        <div className="pk-risk-row">
           {RISK_OPTIONS.map(r => (
             <button
               key={r}
-              style={{
-                ...styles.toggleBtn,
-                ...(risk === r ? styles.toggleActive : {}),
-              }}
+              className={`pk-risk-btn ${risk === r ? 'pk-risk-active' : ''}`}
               onClick={() => setRisk(r)}
               disabled={dropping}
             >
@@ -225,289 +286,63 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Bet controls */}
-      <div style={styles.section}>
-        <span style={styles.label}>Bet</span>
-        <div style={styles.betRow}>
+        <div className="pk-bet-row">
           {BET_PRESETS.map(amount => (
             <button
               key={amount}
-              style={{
-                ...styles.presetBtn,
-                ...(bet === amount && !customBet ? styles.presetActive : {}),
-              }}
+              className={`bet-btn ${bet === amount && !customBet ? 'active' : ''}`}
               onClick={() => handlePreset(amount)}
               disabled={dropping || amount > balance}
             >
               {amount.toLocaleString()}
             </button>
           ))}
+        </div>
+
+        <div className="pk-bet-row">
           <input
             type="text"
             inputMode="numeric"
-            placeholder="Custom"
+            className="bet-custom-input"
+            placeholder={bet.toLocaleString()}
             value={customBet}
             onChange={handleCustomBet}
             disabled={dropping}
-            style={styles.customInput}
           />
+          <div className="balance-display">
+            <span className="balance-label">Bal</span>
+            <span className="balance-amount">{balance.toLocaleString()}</span>
+            <span className="balance-pts">pts</span>
+          </div>
         </div>
       </div>
 
-      {/* Balance */}
-      <div style={styles.balanceRow}>
-        <span style={styles.balLabel}>Balance</span>
-        <span style={styles.balAmount}>{balance.toLocaleString()}</span>
-        <span style={styles.balPts}>pts</span>
+      {/* Canvas */}
+      <div className="pk-canvas-wrapper">
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_W}
+          height={CANVAS_H}
+          className="pk-canvas"
+        />
       </div>
 
-      {/* Peg board */}
-      <div style={styles.boardWrapper}>
-        <div style={styles.board}>
-          {/* Pegs */}
-          {pegRows.map((row, ri) =>
-            row.map((peg, pi) => (
-              <div
-                key={`${ri}-${pi}`}
-                style={{
-                  ...styles.peg,
-                  left: peg.x - PEG_SIZE / 2,
-                  top: peg.y - PEG_SIZE / 2,
-                }}
-              />
-            ))
-          )}
-
-          {/* Ball */}
-          {dropping && (
-            <motion.div
-              ref={ballRef}
-              style={styles.ball}
-              initial={false}
-            />
-          )}
-        </div>
-
-        {/* Multiplier slots */}
-        <div style={styles.slotsRow}>
-          {multipliers.map((mult, i) => {
-            const isWinner = winSlot === i;
-            return (
-              <div
-                key={i}
-                style={{
-                  ...styles.slot,
-                  background: getSlotColor(mult),
-                  opacity: winSlot !== null && !isWinner ? 0.4 : 1,
-                  transform: isWinner ? 'scale(1.15)' : 'scale(1)',
-                  boxShadow: isWinner ? `0 0 12px ${getSlotColor(mult)}` : 'none',
-                  transition: 'all 0.3s ease',
-                }}
-              >
-                {mult}x
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Last result */}
+      {/* Result */}
       {lastResult && (
-        <div style={{
-          ...styles.resultText,
-          color: lastResult.net > 0 ? 'var(--signal-go)' : lastResult.net === 0 ? 'var(--discharge)' : 'var(--signal-stop)',
-        }}>
+        <div className={`pk-result ${lastResult.net >= 0 ? 'pk-result-win' : 'pk-result-loss'}`}>
           {lastResult.multiplier}x — {lastResult.net >= 0 ? '+' : ''}{lastResult.net.toLocaleString()} pts
         </div>
       )}
 
-      {/* DROP button */}
+      {/* Drop button */}
       <button
-        style={{
-          ...styles.dropBtn,
-          opacity: dropping || balance < bet || bet < MIN_BET ? 0.5 : 1,
-        }}
+        className="spin-btn"
         onClick={handleDrop}
         disabled={dropping || balance < bet || bet < MIN_BET}
       >
-        {dropping ? 'DROPPING...' : `DROP ${bet.toLocaleString()}`}
+        {dropping ? <span className="spinner" /> : `DROP ${bet.toLocaleString()}`}
       </button>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    width: 440,
-    maxWidth: '100%',
-    margin: '0 auto',
-    padding: 'var(--sp-4)',
-    fontFamily: "'Chakra Petch', sans-serif",
-    color: 'var(--ink)',
-  },
-  section: {
-    marginBottom: 'var(--sp-3)',
-  },
-  label: {
-    display: 'block',
-    fontFamily: "'Russo One', sans-serif",
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'var(--ink-secondary)',
-    marginBottom: 'var(--sp-1)',
-  },
-  toggleRow: {
-    display: 'flex',
-    gap: 'var(--sp-1)',
-  },
-  toggleBtn: {
-    flex: 1,
-    padding: 'var(--sp-2) var(--sp-3)',
-    border: '1px solid var(--bezel-strong)',
-    borderRadius: 'var(--r-md)',
-    background: 'var(--panel)',
-    color: 'var(--ink-secondary)',
-    fontFamily: "'Chakra Petch', sans-serif",
-    fontWeight: 600,
-    fontSize: 13,
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  },
-  toggleActive: {
-    background: 'var(--phosphor)',
-    color: 'var(--ink)',
-    borderColor: 'var(--phosphor)',
-    boxShadow: '0 0 8px var(--phosphor-glow)',
-  },
-  betRow: {
-    display: 'flex',
-    gap: 'var(--sp-1)',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  presetBtn: {
-    padding: 'var(--sp-1) var(--sp-2)',
-    border: '1px solid var(--bezel)',
-    borderRadius: 'var(--r-sm)',
-    background: 'var(--inset)',
-    color: 'var(--ink-secondary)',
-    fontFamily: "'Chakra Petch', sans-serif",
-    fontSize: 12,
-    fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-  },
-  presetActive: {
-    background: 'var(--raised)',
-    color: 'var(--ink)',
-    borderColor: 'var(--phosphor)',
-  },
-  customInput: {
-    width: 72,
-    padding: 'var(--sp-1) var(--sp-2)',
-    border: '1px solid var(--bezel)',
-    borderRadius: 'var(--r-sm)',
-    background: 'var(--inset)',
-    color: 'var(--ink)',
-    fontFamily: "'Chakra Petch', sans-serif",
-    fontSize: 12,
-    outline: 'none',
-  },
-  balanceRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--sp-2)',
-    marginBottom: 'var(--sp-3)',
-    padding: 'var(--sp-2) var(--sp-3)',
-    background: 'var(--inset)',
-    borderRadius: 'var(--r-md)',
-    border: '1px solid var(--bezel-soft)',
-  },
-  balLabel: {
-    fontSize: 11,
-    color: 'var(--ink-tertiary)',
-    textTransform: 'uppercase',
-    fontWeight: 600,
-  },
-  balAmount: {
-    fontFamily: "'Russo One', sans-serif",
-    fontSize: 16,
-    color: 'var(--discharge)',
-  },
-  balPts: {
-    fontSize: 11,
-    color: 'var(--ink-tertiary)',
-  },
-  boardWrapper: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    marginBottom: 'var(--sp-3)',
-  },
-  board: {
-    position: 'relative',
-    width: BOARD_WIDTH,
-    height: BOARD_HEIGHT,
-    background: 'var(--panel)',
-    borderRadius: 'var(--r-lg)',
-    border: '1px solid var(--bezel)',
-    overflow: 'hidden',
-  },
-  peg: {
-    position: 'absolute',
-    width: PEG_SIZE,
-    height: PEG_SIZE,
-    borderRadius: '50%',
-    background: 'var(--ink-muted)',
-  },
-  ball: {
-    position: 'absolute',
-    width: BALL_SIZE,
-    height: BALL_SIZE,
-    borderRadius: '50%',
-    background: 'var(--discharge)',
-    boxShadow: '0 0 8px var(--discharge-glow)',
-    zIndex: 10,
-    top: 0,
-    left: 0,
-  },
-  slotsRow: {
-    display: 'flex',
-    gap: 2,
-    marginTop: 'var(--sp-2)',
-    width: BOARD_WIDTH,
-  },
-  slot: {
-    flex: 1,
-    textAlign: 'center',
-    padding: 'var(--sp-1) 0',
-    borderRadius: 'var(--r-sm)',
-    fontSize: 11,
-    fontWeight: 700,
-    fontFamily: "'Chakra Petch', sans-serif",
-    color: 'var(--void)',
-  },
-  resultText: {
-    textAlign: 'center',
-    fontFamily: "'Russo One', sans-serif",
-    fontSize: 18,
-    marginBottom: 'var(--sp-3)',
-  },
-  dropBtn: {
-    width: '100%',
-    padding: 'var(--sp-3) 0',
-    border: 'none',
-    borderRadius: 'var(--r-md)',
-    background: 'var(--signal-hot)',
-    color: 'var(--ink)',
-    fontFamily: "'Russo One', sans-serif",
-    fontSize: 16,
-    letterSpacing: '0.06em',
-    cursor: 'pointer',
-    transition: 'all 0.15s',
-    boxShadow: '0 0 12px var(--signal-hot-glow)',
-  },
-};

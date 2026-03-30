@@ -4,6 +4,7 @@ import { createDeck, handValue, isBlackjack, dealerShouldHit } from '../utils/bl
 import { deductPoints, addPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
 import { BET_PRESETS, MIN_BET } from '../utils/constants';
+import { audio } from '../utils/audio';
 
 // ── Phases ──────────────────────────────────────────────
 // betting → playing → dealerTurn → result
@@ -80,12 +81,14 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
       return;
     }
 
+    await audio.ensure();
+
     // Fresh deck
     deckRef.current = createDeck();
 
-    const p1 = draw();
+    const p1 = draw(); audio.cardDeal();
     const d1 = draw();
-    const p2 = draw();
+    const p2 = draw(); audio.cardDeal();
     const d2 = draw();
 
     const pCards = [p1, p2];
@@ -117,6 +120,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
   const handleHit = useCallback(() => {
     if (busy || phase !== PHASE.PLAYING) return;
     const card = draw();
+    audio.cardDeal();
     const next = [...playerCards, card];
     setPlayerCards(next);
 
@@ -132,6 +136,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     if (busy || phase !== PHASE.PLAYING) return;
     setBusy(true);
     setDealerHidden(false);
+    audio.cardFlip();
     setPhase(PHASE.DEALER);
 
     let dCards = [...dealerCards];
@@ -271,7 +276,11 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
 
     // Build history emoji summary
     const emoji = `🃏 ${pCards.map((c) => c.display).join(' ')} vs ${dCards.map((c) => c.display).join(' ')} (${pTotal} vs ${dTotal})`;
-    addHistory([{ emoji }], net, net >= 0 ? 'win' : 'loss');
+    addHistory([{ emoji }], net, net >= 0 ? 'win' : 'loss', 'blackjack');
+
+    // Sound
+    if (net > 0) audio.win(payout / totalBet);
+    else if (net < 0) audio.loss();
 
     setResultText(text);
     setResultNet(net);

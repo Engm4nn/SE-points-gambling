@@ -3,6 +3,7 @@ import * as Tone from 'tone';
 let initialized = false;
 let masterVol;
 let clickSynth, winSynth, lossSynth, bonusSynth, jackpotSynth;
+let plinkoSynth, cardSynth, rouletteSynth;
 let lastClickTime = 0;
 
 async function init() {
@@ -11,7 +12,7 @@ async function init() {
 
   masterVol = new Tone.Volume(-4).toDestination();
 
-  // Reel stop click — sharp, satisfying tick
+  // Reel stop click
   clickSynth = new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: 'triangle' },
     envelope: { attack: 0.001, decay: 0.04, sustain: 0, release: 0.02 },
@@ -47,6 +48,27 @@ async function init() {
     volume: -6,
   }).connect(jackpotReverb);
 
+  // Plinko peg hit — short high-pitched tick, varies pitch
+  plinkoSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.001, decay: 0.03, sustain: 0, release: 0.01 },
+    volume: -12,
+  }).connect(masterVol);
+
+  // Card deal/flip sound
+  cardSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'triangle' },
+    envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.03 },
+    volume: -8,
+  }).connect(masterVol);
+
+  // Roulette tick sound (ball clicking past numbers)
+  rouletteSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'square' },
+    envelope: { attack: 0.001, decay: 0.02, sustain: 0, release: 0.01 },
+    volume: -14,
+  }).connect(masterVol);
+
   initialized = true;
 }
 
@@ -55,15 +77,12 @@ export const audio = {
     await init();
   },
 
-  // No more startSpin/stopSpin noise — just silence during spin
-
   reelStop() {
     if (!initialized) return;
     try {
       const now = Tone.now();
       const time = Math.max(now, lastClickTime + 0.06);
       lastClickTime = time;
-      // Ascending pitch per reel: C5, E5, G5
       const notes = ['C5', 'E5', 'G5'];
       const noteIdx = Math.min(2, Math.round((time - now) / 0.06));
       clickSynth.triggerAttackRelease(notes[noteIdx] || 'G5', '64n', time, 0.4);
@@ -113,6 +132,61 @@ export const audio = {
       chords.forEach((chord, i) => {
         jackpotSynth.triggerAttackRelease(chord, '2n', now + i * 0.25, 0.5);
       });
+    } catch {}
+  },
+
+  // Plinko: ball hits peg — random high pitch
+  plinkoHit() {
+    if (!initialized) return;
+    try {
+      const notes = ['C6', 'D6', 'E6', 'F6', 'G6', 'A6', 'B6'];
+      const note = notes[Math.floor(Math.random() * notes.length)];
+      plinkoSynth.triggerAttackRelease(note, '64n', Tone.now(), 0.3);
+    } catch {}
+  },
+
+  // Plinko: ball lands in winning bucket
+  plinkoWin() {
+    if (!initialized) return;
+    try {
+      const now = Tone.now();
+      ['G5', 'B5', 'D6'].forEach((note, i) => {
+        winSynth.triggerAttackRelease(note, '16n', now + i * 0.06, 0.4);
+      });
+    } catch {}
+  },
+
+  // Blackjack: card dealt
+  cardDeal() {
+    if (!initialized) return;
+    try {
+      cardSynth.triggerAttackRelease('A5', '64n', Tone.now(), 0.3);
+    } catch {}
+  },
+
+  // Blackjack: card flip (dealer reveals)
+  cardFlip() {
+    if (!initialized) return;
+    try {
+      cardSynth.triggerAttackRelease('E5', '32n', Tone.now(), 0.4);
+    } catch {}
+  },
+
+  // Roulette: ball ticking past numbers
+  rouletteTick() {
+    if (!initialized) return;
+    try {
+      rouletteSynth.triggerAttackRelease('C7', '128n', Tone.now(), 0.2);
+    } catch {}
+  },
+
+  // Roulette: ball landing
+  rouletteLand() {
+    if (!initialized) return;
+    try {
+      const now = Tone.now();
+      clickSynth.triggerAttackRelease('G4', '16n', now, 0.5);
+      clickSynth.triggerAttackRelease('C5', '16n', now + 0.1, 0.3);
     } catch {}
   },
 };

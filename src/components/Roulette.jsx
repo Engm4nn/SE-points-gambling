@@ -1,15 +1,16 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NUMBERS, spinWheel, evaluateBets, getNumberColor } from '../utils/rouletteLogic';
 import { deductPoints, addPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
+import { audio } from '../utils/audio';
 
 const CHIP_VALUES = [10, 50, 100, 500, 1000];
 
-const COLOR_MAP = {
-  red: 'var(--signal-hot)',
-  black: '#1a1a2e',
-  green: 'var(--signal-go)',
+const COLOR_HEX = {
+  red: '#F43F5E',
+  black: '#2D2D5E',
+  green: '#34D399',
 };
 
 const COLOR_EMOJI = {
@@ -18,9 +19,6 @@ const COLOR_EMOJI = {
   green: '🟢',
 };
 
-// Build 12x3 grid: row 0 = [3,2,1], row 1 = [6,5,4], ..., row 11 = [36,35,34]
-// Standard layout: column 1 = 1,4,7,...34; column 2 = 2,5,8,...35; column 3 = 3,6,9,...36
-// Each row from top: [1,2,3], [4,5,6], ..., [34,35,36]
 const GRID_ROWS = Array.from({ length: 12 }, (_, r) => [
   r * 3 + 1,
   r * 3 + 2,
@@ -28,12 +26,14 @@ const GRID_ROWS = Array.from({ length: 12 }, (_, r) => [
 ]);
 
 export default function Roulette({ balance, setBalance, username, showToast, addHistory }) {
-  const [phase, setPhase] = useState('betting'); // betting | spinning | result
+  const [phase, setPhase] = useState('betting');
   const [selectedChip, setSelectedChip] = useState(10);
   const [bets, setBets] = useState([]);
   const [winningNumber, setWinningNumber] = useState(null);
   const [payout, setPayout] = useState(0);
-  const [wheelRotation, setWheelRotation] = useState(0);
+  // Spinning numbers animation
+  const [displayNumber, setDisplayNumber] = useState(null);
+  const spinIntervalRef = useRef(null);
 
   const totalBet = bets.reduce((sum, b) => sum + b.amount, 0);
 
@@ -44,7 +44,6 @@ export default function Roulette({ balance, setBalance, username, showToast, add
       return;
     }
     setBets(prev => {
-      // Stack on existing bet of same type+value
       const idx = prev.findIndex(b => b.type === type && b.value === value);
       if (idx >= 0) {
         const updated = [...prev];
@@ -66,8 +65,8 @@ export default function Roulette({ balance, setBalance, username, showToast, add
       showToast('Not enough points!', 'error');
       return;
     }
+    await audio.ensure();
 
-    // Optimistic deduct
     setBalance(prev => prev - totalBet);
     setPhase('spinning');
 
@@ -83,83 +82,151 @@ export default function Roulette({ balance, setBalance, username, showToast, add
     const result = spinWheel();
     setWinningNumber(result);
 
-    // Animate wheel: spin several full rotations + land
-    const spins = 5 + Math.random() * 3; // 5-8 full rotations
-    const finalRotation = wheelRotation + spins * 360;
-    setWheelRotation(finalRotation);
+    // Animated number cycling — fast then slow then stop
+    let tick = 0;
+    const totalTicks = 30;
+    spinIntervalRef.current = setInterval(() => {
+      tick++;
+      const randomNum = Math.floor(Math.random() * 37);
+      setDisplayNumber(randomNum);
+      audio.rouletteTick();
 
-    // Wait for animation
-    setTimeout(async () => {
-      const totalPayout = evaluateBets(result, bets);
-      setPayout(totalPayout);
+      if (tick >= totalTicks) {
+        clearInterval(spinIntervalRef.current);
+        setDisplayNumber(result);
+        audio.rouletteLand();
 
-      if (totalPayout > 0) {
-        setBalance(prev => prev + totalPayout);
-        try {
-          await addPoints(username, totalPayout);
-        } catch {}
+        setTimeout(async () => {
+          const totalPayout = evaluateBets(result, bets);
+          setPayout(totalPayout);
+
+          if (totalPayout > 0) {
+            setBalance(prev => prev + totalPayout);
+            audio.win(totalPayout / totalBet);
+            try { await addPoints(username, totalPayout); } catch {}
+          } else {
+            audio.loss();
+          }
+
+          const net = totalPayout - totalBet;
+          const color = getNumberColor(result);
+          try { await reportSpin(username, totalBet, totalPayout); } catch {}
+
+          addHistory(
+            [{ emoji: `${COLOR_EMOJI[color]} ${result}` }],
+            net,
+            net >= 0 ? 'win' : 'loss',
+            'roulette'
+          );
+
+          setPhase('result');
+        }, 800);
       }
+    }, tick < 15 ? 60 : 60 + (tick - 15) * 30); // speeds up then slows down
 
-      const net = totalPayout - totalBet;
-      const color = getNumberColor(result);
-
-      try {
-        await reportSpin(username, totalBet, totalPayout);
-      } catch {}
-
-      addHistory(
-        [{ emoji: `${COLOR_EMOJI[color]} ${result}` }],
-        net,
-        'roulette'
-      );
-
-      setPhase('result');
-    }, 3200);
-  }, [phase, bets, totalBet, balance, username, showToast, setBalance, wheelRotation, addHistory]);
+    // Fallback: use fixed timing with setTimeout chain
+    clearInterval(spinIntervalRef.current);
+    let delay = 0;
+    for (let i = 0; i < totalTicks; i++) {
+      const interval = i < 15 ? 60 : 60 + (i - 15) * 30;
+      delay += interval;
+      const isLast = i === totalTicks - 1;
+      setTimeout(() => {
+        const num = isLast ? result : Math.floor(Math.random() * 37);
+        setDisplayNumber(num);
+        audio.rouletteTick();
+        if (isLast) {
+          audio.rouletteLand();
+          setTimeout(async () => {
+            const totalPayout = evaluateBets(result, bets);
+            setPayout(totalPayout);
+            if (totalPayout > 0) {
+              setBalance(prev => prev + totalPayout);
+              audio.win(totalPayout / totalBet);
+              try { await addPoints(username, totalPayout); } catch {}
+            } else {
+              audio.loss();
+            }
+            const net = totalPayout - totalBet;
+            const color = getNumberColor(result);
+            try { await reportSpin(username, totalBet, totalPayout); } catch {}
+            addHistory(
+              [{ emoji: `${COLOR_EMOJI[color]} ${result}` }],
+              net,
+              net >= 0 ? 'win' : 'loss',
+              'roulette'
+            );
+            setPhase('result');
+          }, 800);
+        }
+      }, delay);
+    }
+  }, [phase, bets, totalBet, balance, username, showToast, setBalance, addHistory]);
 
   const newRound = useCallback(() => {
     setBets([]);
     setWinningNumber(null);
     setPayout(0);
+    setDisplayNumber(null);
     setPhase('betting');
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (spinIntervalRef.current) clearInterval(spinIntervalRef.current);
+    };
   }, []);
 
   const resultColor = winningNumber !== null ? getNumberColor(winningNumber) : null;
   const net = payout - totalBet;
+  const displayColor = displayNumber !== null ? getNumberColor(displayNumber) : null;
 
   return (
-    <div style={{
-      maxWidth: 440,
-      margin: '0 auto',
-      fontFamily: "'Chakra Petch', sans-serif",
-      color: 'var(--ink)',
-    }}>
+    <div className="rl-game">
+      {/* Spinning / Result display — big number at top */}
+      <AnimatePresence>
+        {(phase === 'spinning' || phase === 'result') && (
+          <motion.div
+            className="rl-display"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+          >
+            <motion.div
+              className="rl-big-number"
+              style={{ background: displayColor ? COLOR_HEX[displayColor] : 'var(--panel)' }}
+              animate={phase === 'spinning' ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+              transition={{ repeat: phase === 'spinning' ? Infinity : 0, duration: 0.3 }}
+            >
+              {displayNumber ?? '?'}
+            </motion.div>
+
+            {phase === 'result' && (
+              <motion.div
+                className="rl-result-text"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <span style={{ color: COLOR_HEX[resultColor] }}>
+                  {winningNumber} {resultColor?.toUpperCase()}
+                </span>
+                <span style={{ color: net >= 0 ? 'var(--signal-go)' : 'var(--signal-stop)' }}>
+                  {payout > 0 ? `+${net.toLocaleString()} pts` : 'No win'}
+                </span>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Chip Selector */}
-      <div style={{
-        display: 'flex',
-        gap: 'var(--sp-2)',
-        justifyContent: 'center',
-        marginBottom: 'var(--sp-3)',
-        flexWrap: 'wrap',
-      }}>
+      <div className="rl-chips">
         {CHIP_VALUES.map(v => (
           <button
             key={v}
+            className={`rl-chip ${selectedChip === v ? 'rl-chip-active' : ''}`}
             onClick={() => setSelectedChip(v)}
             disabled={phase !== 'betting'}
-            style={{
-              width: 52,
-              height: 32,
-              borderRadius: 'var(--r-md)',
-              border: selectedChip === v ? '2px solid var(--phosphor)' : '2px solid transparent',
-              background: selectedChip === v ? 'var(--phosphor)' : 'var(--panel)',
-              color: 'var(--ink)',
-              fontFamily: "'Russo One', sans-serif",
-              fontSize: 13,
-              cursor: phase === 'betting' ? 'pointer' : 'default',
-              opacity: phase !== 'betting' ? 0.5 : 1,
-              transition: 'all 0.15s',
-            }}
           >
             {v}
           </button>
@@ -167,35 +234,18 @@ export default function Roulette({ balance, setBalance, username, showToast, add
       </div>
 
       {/* Zero */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 2 }}>
+      <div className="rl-zero-row">
         <button
+          className={`rl-num-btn rl-green ${bets.some(b => b.type === 'number' && b.value === 0) ? 'rl-has-bet' : ''} ${phase === 'result' && winningNumber === 0 ? 'rl-winner' : ''}`}
           onClick={() => placeBet('number', 0)}
           disabled={phase !== 'betting'}
-          style={{
-            width: '100%',
-            maxWidth: 109,
-            height: 28,
-            background: COLOR_MAP.green,
-            border: bets.some(b => b.type === 'number' && b.value === 0) ? '2px solid var(--discharge)' : '1px solid rgba(255,255,255,0.15)',
-            borderRadius: 'var(--r-sm)',
-            color: '#fff',
-            fontFamily: "'Russo One', sans-serif",
-            fontSize: 13,
-            cursor: phase === 'betting' ? 'pointer' : 'default',
-            opacity: phase !== 'betting' ? 0.6 : 1,
-          }}
         >
           0
         </button>
       </div>
 
-      {/* Number Grid: 12 rows x 3 columns */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
-        gap: 2,
-        marginBottom: 'var(--sp-2)',
-      }}>
+      {/* Number Grid */}
+      <div className="rl-grid">
         {GRID_ROWS.flat().map(n => {
           const color = getNumberColor(n);
           const hasBet = bets.some(b => b.type === 'number' && b.value === n);
@@ -203,21 +253,9 @@ export default function Roulette({ balance, setBalance, username, showToast, add
           return (
             <button
               key={n}
+              className={`rl-num-btn ${color === 'red' ? 'rl-red' : 'rl-black'} ${hasBet ? 'rl-has-bet' : ''} ${isWinner ? 'rl-winner' : ''}`}
               onClick={() => placeBet('number', n)}
               disabled={phase !== 'betting'}
-              style={{
-                height: 28,
-                background: isWinner ? 'var(--discharge)' : COLOR_MAP[color],
-                border: hasBet ? '2px solid var(--discharge)' : '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 'var(--r-sm)',
-                color: isWinner ? '#000' : '#fff',
-                fontFamily: "'Russo One', sans-serif",
-                fontSize: 12,
-                cursor: phase === 'betting' ? 'pointer' : 'default',
-                opacity: phase !== 'betting' ? 0.6 : 1,
-                transition: 'all 0.15s',
-                fontWeight: isWinner ? 'bold' : 'normal',
-              }}
             >
               {n}
             </button>
@@ -226,39 +264,22 @@ export default function Roulette({ balance, setBalance, username, showToast, add
       </div>
 
       {/* Outside Bets */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: 'var(--sp-1)',
-        marginBottom: 'var(--sp-3)',
-      }}>
+      <div className="rl-outside">
         {[
-          { label: '🔴 Red', type: 'red' },
-          { label: '⚫ Black', type: 'black' },
-          { label: 'Odd', type: 'odd' },
-          { label: 'Even', type: 'even' },
-          { label: '1-18', type: 'low' },
-          { label: '19-36', type: 'high' },
-        ].map(({ label, type }) => {
+          { label: 'Red', type: 'red', cls: 'rl-out-red' },
+          { label: 'Black', type: 'black', cls: 'rl-out-black' },
+          { label: 'Odd', type: 'odd', cls: '' },
+          { label: 'Even', type: 'even', cls: '' },
+          { label: '1-18', type: 'low', cls: '' },
+          { label: '19-36', type: 'high', cls: '' },
+        ].map(({ label, type, cls }) => {
           const hasBet = bets.some(b => b.type === type);
           return (
             <button
               key={type}
+              className={`rl-out-btn ${cls} ${hasBet ? 'rl-has-bet' : ''}`}
               onClick={() => placeBet(type, undefined)}
               disabled={phase !== 'betting'}
-              style={{
-                height: 34,
-                background: hasBet ? 'rgba(124, 58, 237, 0.3)' : 'var(--panel)',
-                border: hasBet ? '2px solid var(--phosphor)' : '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 'var(--r-md)',
-                color: 'var(--ink)',
-                fontFamily: "'Chakra Petch', sans-serif",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: phase === 'betting' ? 'pointer' : 'default',
-                opacity: phase !== 'betting' ? 0.5 : 1,
-                transition: 'all 0.15s',
-              }}
             >
               {label}
             </button>
@@ -266,211 +287,37 @@ export default function Roulette({ balance, setBalance, username, showToast, add
         })}
       </div>
 
-      {/* Active Bets Summary */}
+      {/* Bets summary */}
       {bets.length > 0 && (
-        <div style={{
-          background: 'rgba(124, 58, 237, 0.1)',
-          borderRadius: 'var(--r-md)',
-          padding: 'var(--sp-2) var(--sp-3)',
-          marginBottom: 'var(--sp-2)',
-          fontSize: 13,
-          color: 'var(--ink-secondary)',
-          maxHeight: 72,
-          overflowY: 'auto',
-        }}>
+        <div className="rl-bets-summary">
           {bets.map((b, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>
-                {b.type === 'number' ? `#${b.value}` : b.type.charAt(0).toUpperCase() + b.type.slice(1)}
-              </span>
-              <span style={{ color: 'var(--discharge)' }}>{b.amount}</span>
+            <div key={i} className="rl-bet-line">
+              <span>{b.type === 'number' ? `#${b.value}` : b.type}</span>
+              <span className="rl-bet-amount">{b.amount}</span>
             </div>
           ))}
-          <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            marginTop: 'var(--sp-1)',
-            paddingTop: 'var(--sp-1)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontWeight: 700,
-            color: 'var(--ink)',
-          }}>
+          <div className="rl-bet-total">
             <span>Total</span>
-            <span>{totalBet}</span>
+            <span>{totalBet.toLocaleString()}</span>
           </div>
         </div>
       )}
 
-      {/* Wheel Animation Area */}
-      <AnimatePresence>
-        {(phase === 'spinning' || phase === 'result') && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              marginBottom: 'var(--sp-3)',
-            }}
-          >
-            <motion.div
-              animate={{ rotate: wheelRotation }}
-              transition={{
-                duration: 3,
-                ease: [0.2, 0.8, 0.3, 1], // deceleration curve
-              }}
-              style={{
-                width: 100,
-                height: 100,
-                borderRadius: '50%',
-                background: `conic-gradient(
-                  var(--signal-hot) 0deg 60deg,
-                  #1a1a2e 60deg 120deg,
-                  var(--signal-go) 120deg 130deg,
-                  var(--signal-hot) 130deg 190deg,
-                  #1a1a2e 190deg 250deg,
-                  var(--signal-hot) 250deg 310deg,
-                  #1a1a2e 310deg 360deg
-                )`,
-                border: '4px solid var(--phosphor)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 'var(--sp-2)',
-                boxShadow: '0 0 24px rgba(124, 58, 237, 0.4)',
-              }}
-            >
-              <div style={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                background: 'var(--void)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontFamily: "'Russo One', sans-serif",
-                fontSize: 16,
-                color: phase === 'result' ? COLOR_MAP[resultColor] : 'var(--ink)',
-                border: '2px solid var(--panel)',
-              }}>
-                {phase === 'result' ? winningNumber : '?'}
-              </div>
-            </motion.div>
-
-            {/* Result Display */}
-            {phase === 'result' && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                style={{ textAlign: 'center' }}
-              >
-                <div style={{
-                  fontFamily: "'Russo One', sans-serif",
-                  fontSize: 22,
-                  color: COLOR_MAP[resultColor],
-                  marginBottom: 'var(--sp-1)',
-                }}>
-                  {winningNumber} {resultColor.toUpperCase()}
-                </div>
-                <div style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: net >= 0 ? 'var(--signal-go)' : 'var(--signal-stop)',
-                }}>
-                  {payout > 0 ? `Won ${payout} (+${net})` : 'No win'}
-                </div>
-              </motion.div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Action Buttons */}
-      <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
+      {/* Action buttons */}
+      <div className="rl-actions">
         {phase === 'betting' && (
           <>
-            <button
-              onClick={clearBets}
-              disabled={bets.length === 0}
-              style={{
-                flex: 1,
-                height: 42,
-                borderRadius: 'var(--r-md)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                background: 'var(--panel)',
-                color: 'var(--ink-secondary)',
-                fontFamily: "'Chakra Petch', sans-serif",
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: bets.length > 0 ? 'pointer' : 'default',
-                opacity: bets.length === 0 ? 0.4 : 1,
-              }}
-            >
-              Clear
-            </button>
-            <button
-              onClick={handleSpin}
-              disabled={bets.length === 0 || totalBet > balance}
-              style={{
-                flex: 2,
-                height: 42,
-                borderRadius: 'var(--r-md)',
-                border: 'none',
-                background: bets.length > 0 && totalBet <= balance
-                  ? 'linear-gradient(135deg, var(--phosphor), var(--signal-hot))'
-                  : 'var(--panel)',
-                color: '#fff',
-                fontFamily: "'Russo One', sans-serif",
-                fontSize: 15,
-                cursor: bets.length > 0 && totalBet <= balance ? 'pointer' : 'default',
-                opacity: bets.length === 0 || totalBet > balance ? 0.4 : 1,
-                boxShadow: bets.length > 0 ? '0 0 16px rgba(124, 58, 237, 0.3)' : 'none',
-                transition: 'all 0.2s',
-              }}
-            >
-              SPIN ({totalBet})
+            <button className="rl-clear-btn" onClick={clearBets} disabled={bets.length === 0}>Clear</button>
+            <button className="spin-btn" onClick={handleSpin} disabled={bets.length === 0 || totalBet > balance}>
+              SPIN ({totalBet.toLocaleString()})
             </button>
           </>
         )}
-
         {phase === 'spinning' && (
-          <div style={{
-            flex: 1,
-            height: 42,
-            borderRadius: 'var(--r-md)',
-            background: 'var(--panel)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontFamily: "'Russo One', sans-serif",
-            fontSize: 14,
-            color: 'var(--phosphor)',
-            animation: 'pulse 1s infinite',
-          }}>
-            Spinning...
-          </div>
+          <div className="rl-spinning-label">Spinning...</div>
         )}
-
         {phase === 'result' && (
-          <button
-            onClick={newRound}
-            style={{
-              flex: 1,
-              height: 42,
-              borderRadius: 'var(--r-md)',
-              border: 'none',
-              background: 'linear-gradient(135deg, var(--phosphor), var(--signal-hot))',
-              color: '#fff',
-              fontFamily: "'Russo One', sans-serif",
-              fontSize: 15,
-              cursor: 'pointer',
-              boxShadow: '0 0 16px rgba(124, 58, 237, 0.3)',
-            }}
-          >
-            NEW ROUND
-          </button>
+          <button className="spin-btn" onClick={newRound}>NEW ROUND</button>
         )}
       </div>
     </div>
