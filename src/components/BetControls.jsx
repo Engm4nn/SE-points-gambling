@@ -100,7 +100,6 @@ export default function BetControls({
         )}
       </div>
 
-      {/* Autospin + Turbo row */}
       <div className="spin-options-row">
         <button
           className={`option-btn ${autoSpin ? 'option-active' : ''}`}

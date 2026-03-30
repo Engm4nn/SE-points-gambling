@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { User, Disc3, Trophy, History } from 'lucide-react';
+import { User, Disc3, Trophy, History, Gift, Heart, X } from 'lucide-react';
 import UserLogin from './components/UserLogin';
 import AuthCallback from './components/AuthCallback';
 import SlotMachine from './components/SlotMachine';
@@ -27,6 +27,7 @@ export default function App() {
   const [balance, setBalance] = useState(0);
   const [loggedIn, setLoggedIn] = useState(false);
   const [tab, setTab] = useState('slots');
+  const [showDeposit, setShowDeposit] = useState(false);
 
   const [leaderboard, setLeaderboard] = useState([]);
   const [history, setHistory] = useLocalStorage(LS_KEYS.HISTORY, []);
@@ -137,6 +138,25 @@ export default function App() {
               <div className="app-header">
                 <h1 className="app-title"><Disc3 size={22} /> StreamSlots</h1>
                 <div className="app-header-right">
+                  <div className="deposit-wrapper">
+                    <button className="deposit-btn-nav" onClick={() => setShowDeposit(prev => !prev)}>
+                      <Gift size={15} /> Get Points
+                    </button>
+                    {showDeposit && (
+                      <div className="deposit-dropdown">
+                        <button className="deposit-close" onClick={() => setShowDeposit(false)} aria-label="Close"><X size={14} /></button>
+                        <p className="deposit-info">Earn <strong>1,000 pts</strong> per sub or gifted sub!</p>
+                        <div className="deposit-links">
+                          <a href={`https://www.twitch.tv/subs/${CHANNEL_NAME}`} target="_blank" rel="noopener noreferrer" className="deposit-link deposit-sub">
+                            <Heart size={14} /> Subscribe
+                          </a>
+                          <a href={`https://www.twitch.tv/subs/${CHANNEL_NAME}`} target="_blank" rel="noopener noreferrer" className="deposit-link deposit-gift">
+                            <Gift size={14} /> Gift a Sub
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   {avatar && <img src={avatar} alt="" className="header-avatar" />}
                   <span className="header-user"><User size={16} /> {displayName}</span>
                 </div>

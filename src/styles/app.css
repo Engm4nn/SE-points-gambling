@@ -176,6 +176,112 @@ input:focus-visible {
   border: 1px solid var(--bezel-strong);
 }
 
+/* Deposit button + dropdown */
+.deposit-wrapper {
+  position: relative;
+}
+
+.deposit-btn-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: linear-gradient(135deg, var(--signal-hot), var(--signal-hot-dim));
+  border: none;
+  border-radius: var(--r-md);
+  color: #fff;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+
+.deposit-btn-nav:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--signal-hot-glow);
+}
+
+.deposit-dropdown {
+  position: absolute;
+  top: calc(100% + var(--sp-2));
+  right: 0;
+  width: 240px;
+  padding: var(--sp-4);
+  background: var(--panel);
+  border: 1px solid var(--bezel-strong);
+  border-radius: var(--r-lg);
+  z-index: 100;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.deposit-close {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: 2px;
+}
+
+.deposit-close:hover {
+  color: var(--ink);
+}
+
+.deposit-info {
+  font-size: 0.8rem;
+  color: var(--ink-secondary);
+  margin-bottom: var(--sp-3);
+  line-height: 1.5;
+}
+
+.deposit-info strong {
+  color: var(--discharge);
+}
+
+.deposit-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.deposit-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-md);
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform var(--t-fast) var(--ease-out);
+  cursor: pointer;
+}
+
+.deposit-link:hover {
+  transform: translateY(-1px);
+}
+
+.deposit-sub {
+  background: #9146FF;
+  color: #fff;
+}
+
+.deposit-gift {
+  background: var(--panel);
+  border: 1px solid var(--bezel-strong);
+  color: var(--ink-secondary);
+}
+
+.deposit-gift:hover {
+  border-color: var(--phosphor);
+  color: var(--ink);
+}
+
 .header-user {
   display: flex;
   align-items: center;
