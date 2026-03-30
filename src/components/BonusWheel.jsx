@@ -10,14 +10,14 @@ const SLICES = [
   { multiplier: 2,   color: '#34D399', label: '2x' },
 ];
 
-// Hidden probabilities — tuned for ~99% bonus RTP
-// E[mult] = 3.37, with 3 spins at 99% base RTP
+// Hidden probabilities — tuned for 86% free spins RTP (94.6% overall bonus)
+// E[mult] = 3.04, with 3 spins at 94.3% base RTP
 const WEIGHTS = [
-  { multiplier: 100, weight: 0.003 },  // 0.3%
-  { multiplier: 10,  weight: 0.015 },  // 1.5%
-  { multiplier: 5,   weight: 0.135 },  // 13.5%
-  { multiplier: 3,   weight: 0.547 },  // 54.7%
-  { multiplier: 2,   weight: 0.300 },  // 30%
+  { multiplier: 100, weight: 0.002 },  // 0.2%
+  { multiplier: 10,  weight: 0.050 },  // 5%
+  { multiplier: 5,   weight: 0.100 },  // 10%
+  { multiplier: 3,   weight: 0.143 },  // 14.3%
+  { multiplier: 2,   weight: 0.705 },  // 70.5%
 ];
 
 function pickMultiplier() {
