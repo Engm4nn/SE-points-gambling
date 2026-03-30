@@ -1886,6 +1886,140 @@ input:focus-visible {
   color: var(--phosphor);
 }
 
+/* ===== VAULT HEIST ===== */
+.vh-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 26, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+}
+
+.vh-content {
+  text-align: center;
+  width: 90%;
+  max-width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.vh-title {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.8rem;
+  color: var(--discharge);
+  letter-spacing: 4px;
+}
+
+.vh-subtitle {
+  font-size: 0.8rem;
+  color: var(--ink-tertiary);
+}
+
+.vh-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--panel);
+  border: 1px solid var(--bezel-strong);
+  border-radius: var(--r-lg);
+}
+
+.vh-total-label {
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.vh-total-amount {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.5rem;
+  color: var(--discharge);
+}
+
+.vh-total-payout {
+  font-size: 0.8rem;
+  color: var(--ink-secondary);
+}
+
+.vh-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-2);
+}
+
+.vh-vault {
+  aspect-ratio: 1;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--bezel);
+  background: var(--panel);
+  color: var(--ink-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease-out);
+  font-size: 0.9rem;
+}
+
+.vh-vault:hover:not(:disabled) {
+  border-color: var(--discharge);
+  background: var(--raised);
+  transform: translateY(-2px);
+}
+
+.vh-vault:disabled {
+  cursor: default;
+}
+
+.vh-value {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--signal-go);
+}
+
+.vh-vault-value {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.85rem;
+}
+
+.vh-trap {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: var(--signal-hot);
+  color: var(--signal-hot);
+  animation: mine-shake 0.3s ease;
+}
+
+.vh-last {
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.3);
+}
+
+.vh-result {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.9rem;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-md);
+}
+
+.vh-result-trap {
+  color: var(--signal-hot);
+}
+
+.vh-result-clear {
+  color: var(--discharge);
+}
+
+.vh-hint {
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+}
+
 /* ===== MINES ===== */
 .mines-game {
   width: 100%;

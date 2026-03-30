@@ -16,7 +16,7 @@ const INFO = {
       ['2× Any', '1.55×'],
       ['No match', '0×'],
     ],
-    notes: 'Jackpot grows from 1% of losses + 10 pts/min. Hit 3× 7️⃣ to win it. Bonus: spin the wheel for a multiplier, then 3 free spins.',
+    notes: 'Jackpot grows from 1% of losses + 10 pts/min. Hit 3× 7️⃣ to win it. Bonus: triggers Vault Heist — pick from 12 vaults to add multipliers, avoid 6 traps!',
   },
   blackjack: {
     title: 'Blackjack',

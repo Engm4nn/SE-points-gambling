@@ -55,7 +55,7 @@ export default function App() {
 
   useEffect(() => {
     if (!ready) return;
-    const load = () => fetchLeaderboard('top3', 10).then(setLeaderboard).catch(() => {});
+    const load = () => fetchLeaderboard('all', 50).then(setLeaderboard).catch(() => {});
     load();
     const interval = setInterval(load, 15000);
     return () => clearInterval(interval);
@@ -89,7 +89,7 @@ export default function App() {
   const refreshLeaderboard = useCallback(async () => {
     setLbRefreshing(true);
     try {
-      const data = await fetchLeaderboard('top3', 10);
+      const data = await fetchLeaderboard('all', 50);
       setLeaderboard(data);
     } catch {}
     setLbRefreshing(false);
