@@ -9,25 +9,21 @@ import { audio } from '../utils/audio';
 const RISK_OPTIONS = ['low', 'medium', 'high'];
 const BET_PRESETS = [10, 100, 1000, 5000];
 
-// Board dimensions
 const CANVAS_W = 400;
 const CANVAS_H = 420;
 const PIN_RADIUS = 4;
 const BALL_RADIUS = 7;
-const BIN_COUNT = ROWS + 1; // 9 bins for 8 rows
+const BIN_COUNT = ROWS + 1;
 
-// Colors
 const VOID = '#0B0B1A';
 const PIN_COLOR = '#3D4466';
 const BALL_COLOR = '#FBBF24';
 const WALL_COLOR = '#18183A';
 
-// Bin colors: red edges, yellow center
 function getBinColor(index) {
   const dist = Math.abs(index - Math.floor(BIN_COUNT / 2));
   const maxDist = Math.floor(BIN_COUNT / 2);
   const t = dist / maxDist;
-  // Interpolate from green (center) to red (edges)
   if (t < 0.3) return '#34D399';
   if (t < 0.6) return '#FBBF24';
   return '#F43F5E';
@@ -37,16 +33,15 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
   const [risk, setRisk] = useState('medium');
   const [bet, setBet] = useState(10);
   const [customBet, setCustomBet] = useState('');
-  const [dropping, setDropping] = useState(false);
   const [lastResult, setLastResult] = useState(null);
+  const [activeBalls, setActiveBalls] = useState(0);
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const renderRef = useRef(null);
   const runnerRef = useRef(null);
-  const pinsLastRowX = useRef([]);
-  const activeBalls = useRef(0);
+  const riskRef = useRef(risk);
+  riskRef.current = risk;
 
-  // Initialize Matter.js engine and renderer
   useEffect(() => {
     const engine = Matter.Engine.create({
       gravity: { x: 0, y: 1.2 },
@@ -66,7 +61,6 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
     });
     renderRef.current = render;
 
-    // Create pins
     const pins = [];
     const pinSpacingX = CANVAS_W / (ROWS + 2);
     const pinSpacingY = (CANVAS_H - 80) / (ROWS + 1);
@@ -88,58 +82,39 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
           collisionFilter: { category: 0x0001 },
         });
         pins.push(pin);
-
-        // Track last row x positions for bin detection
-        if (row === ROWS - 1) {
-          pinsLastRowX.current.push(x);
-        }
       }
     }
 
-    // Walls (angled to guide balls)
     const wallThickness = 20;
     const leftWall = Matter.Bodies.rectangle(-wallThickness / 2, CANVAS_H / 2, wallThickness, CANVAS_H, {
-      isStatic: true,
-      render: { fillStyle: WALL_COLOR },
+      isStatic: true, render: { fillStyle: WALL_COLOR },
     });
     const rightWall = Matter.Bodies.rectangle(CANVAS_W + wallThickness / 2, CANVAS_H / 2, wallThickness, CANVAS_H, {
-      isStatic: true,
-      render: { fillStyle: WALL_COLOR },
+      isStatic: true, render: { fillStyle: WALL_COLOR },
     });
 
-    // Bottom sensor to detect ball landing
-    const bottomSensor = Matter.Bodies.rectangle(CANVAS_W / 2, CANVAS_H + 10, CANVAS_W, 20, {
-      isStatic: true,
-      isSensor: true,
-      render: { visible: false },
-      label: 'bottomSensor',
-    });
+    Matter.Composite.add(engine.world, [...pins, leftWall, rightWall]);
 
-    Matter.Composite.add(engine.world, [...pins, leftWall, rightWall, bottomSensor]);
-
-    // Draw bin labels on canvas after each render
+    // Draw bin labels
     Matter.Events.on(render, 'afterRender', () => {
       const ctx = render.context;
       const binWidth = CANVAS_W / BIN_COUNT;
       const binY = CANVAS_H - 30;
+      const mults = RISK_LEVELS[riskRef.current] || RISK_LEVELS.medium;
 
       for (let i = 0; i < BIN_COUNT; i++) {
         const x = i * binWidth + binWidth / 2;
         const color = getBinColor(i);
 
-        // Bin background
         ctx.fillStyle = color;
         ctx.globalAlpha = 0.2;
         ctx.fillRect(i * binWidth + 2, binY, binWidth - 4, 28);
         ctx.globalAlpha = 1;
 
-        // Bin border
         ctx.strokeStyle = color;
         ctx.lineWidth = 1;
         ctx.strokeRect(i * binWidth + 2, binY, binWidth - 4, 28);
 
-        // Multiplier text
-        const mults = RISK_LEVELS[risk] || RISK_LEVELS.medium;
         ctx.fillStyle = color;
         ctx.font = 'bold 10px "Chakra Petch", sans-serif';
         ctx.textAlign = 'center';
@@ -158,36 +133,32 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
       Matter.Runner.stop(runner);
       Matter.Engine.clear(engine);
     };
-  }, [risk]);
+  }, []); // Only init once — risk changes read from ref
 
   const determineBin = useCallback((ballX) => {
     const binWidth = CANVAS_W / BIN_COUNT;
-    let bin = Math.floor(ballX / binWidth);
-    bin = Math.max(0, Math.min(BIN_COUNT - 1, bin));
-    return bin;
+    return Math.max(0, Math.min(BIN_COUNT - 1, Math.floor(ballX / binWidth)));
   }, []);
 
   const handleDrop = useCallback(async () => {
-    if (dropping || balance < bet) return;
+    if (balance < bet) return;
     await audio.ensure();
 
-    setDropping(true);
-    setLastResult(null);
-    setBalance(prev => prev - bet);
+    // Deduct immediately
+    const dropBet = bet;
+    const dropRisk = risk;
+    setBalance(prev => prev - dropBet);
 
-    try {
-      await deductPoints(username, bet);
-    } catch {
-      setBalance(prev => prev + bet);
-      setDropping(false);
+    // API deduct (fire and forget with refund on error)
+    deductPoints(username, dropBet).catch(() => {
+      setBalance(prev => prev + dropBet);
       showToast('API error — bet refunded', 'error');
-      return;
-    }
+    });
 
     const engine = engineRef.current;
-    if (!engine) { setDropping(false); return; }
+    if (!engine) return;
 
-    // Create ball with slight random offset
+    // Spawn ball
     const offsetX = (Math.random() - 0.5) * 20;
     const ball = Matter.Bodies.circle(CANVAS_W / 2 + offsetX, 10, BALL_RADIUS, {
       restitution: 0.5,
@@ -197,14 +168,14 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
       render: { fillStyle: BALL_COLOR },
       collisionFilter: {
         category: 0x0002,
-        mask: 0x0001, // Only collide with pins, not other balls
+        mask: 0x0001,
       },
     });
 
-    activeBalls.current += 1;
+    setActiveBalls(prev => prev + 1);
     Matter.Composite.add(engine.world, ball);
 
-    // Collision sound on pin hits
+    // Peg hit sounds
     const collisionHandler = (event) => {
       for (const pair of event.pairs) {
         if (pair.bodyA === ball || pair.bodyB === ball) {
@@ -214,31 +185,29 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
     };
     Matter.Events.on(engine, 'collisionStart', collisionHandler);
 
-    // Check when ball reaches bottom
+    // Track this ball independently
     const checkInterval = setInterval(() => {
       if (ball.position.y > CANVAS_H - 40) {
         clearInterval(checkInterval);
         Matter.Events.off(engine, 'collisionStart', collisionHandler);
 
         const binIndex = determineBin(ball.position.x);
-        const multiplier = getMultiplier(binIndex, risk);
-        const payout = Math.floor(bet * multiplier);
+        const multiplier = getMultiplier(binIndex, dropRisk);
+        const payout = Math.floor(dropBet * multiplier);
 
-        // Remove ball after short delay
         setTimeout(() => {
           Matter.Composite.remove(engine.world, ball);
-          activeBalls.current -= 1;
-        }, 500);
+          setActiveBalls(prev => prev - 1);
+        }, 300);
 
-        // Process result
         if (payout > 0) {
           setBalance(prev => prev + payout);
           addPoints(username, payout).catch(() => {});
         }
 
-        const net = payout - bet;
+        const net = payout - dropBet;
         setLastResult({ multiplier, payout, net, binIndex });
-        reportSpin(username, bet, payout);
+        reportSpin(username, dropBet, payout);
         addHistory(
           [{ emoji: `${multiplier}x` }],
           net,
@@ -248,15 +217,10 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
 
         if (net > 0) {
           audio.plinkoWin();
-          showToast(`${multiplier}x — +${net.toLocaleString()} pts`, 'win');
-        } else if (net < 0) {
-          showToast(`${multiplier}x — ${net.toLocaleString()} pts`, 'error');
         }
-
-        setDropping(false);
       }
     }, 50);
-  }, [dropping, balance, bet, username, risk, setBalance, showToast, addHistory, determineBin]);
+  }, [balance, bet, risk, username, setBalance, showToast, addHistory, determineBin]);
 
   const handleCustomBet = (e) => {
     const val = e.target.value.replace(/[^0-9]/g, '');
@@ -272,7 +236,6 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
 
   return (
     <div className="plinko-game">
-      {/* Risk selector */}
       <div className="pk-controls">
         <div className="pk-risk-row">
           {RISK_OPTIONS.map(r => (
@@ -280,7 +243,6 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
               key={r}
               className={`pk-risk-btn ${risk === r ? 'pk-risk-active' : ''}`}
               onClick={() => setRisk(r)}
-              disabled={dropping}
             >
               {r.charAt(0).toUpperCase() + r.slice(1)}
             </button>
@@ -293,7 +255,7 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
               key={amount}
               className={`bet-btn ${bet === amount && !customBet ? 'active' : ''}`}
               onClick={() => handlePreset(amount)}
-              disabled={dropping || amount > balance}
+              disabled={amount > balance}
             >
               {amount.toLocaleString()}
             </button>
@@ -308,7 +270,6 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
             placeholder={bet.toLocaleString()}
             value={customBet}
             onChange={handleCustomBet}
-            disabled={dropping}
           />
           <div className="balance-display">
             <span className="balance-label">Bal</span>
@@ -318,7 +279,6 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
         </div>
       </div>
 
-      {/* Canvas */}
       <div className="pk-canvas-wrapper">
         <canvas
           ref={canvasRef}
@@ -328,20 +288,18 @@ export default function Plinko({ balance, setBalance, username, showToast, addHi
         />
       </div>
 
-      {/* Result */}
       {lastResult && (
         <div className={`pk-result ${lastResult.net >= 0 ? 'pk-result-win' : 'pk-result-loss'}`}>
           {lastResult.multiplier}x — {lastResult.net >= 0 ? '+' : ''}{lastResult.net.toLocaleString()} pts
         </div>
       )}
 
-      {/* Drop button */}
       <button
         className="spin-btn"
         onClick={handleDrop}
-        disabled={dropping || balance < bet || bet < MIN_BET}
+        disabled={balance < bet || bet < MIN_BET}
       >
-        {dropping ? <span className="spinner" /> : `DROP ${bet.toLocaleString()}`}
+        DROP {bet.toLocaleString()} {activeBalls > 0 ? `(${activeBalls} active)` : ''}
       </button>
     </div>
   );
