@@ -2,8 +2,10 @@ import * as Tone from 'tone';
 
 let initialized = false;
 let masterVol;
-let spinSynth, winSynth, lossSynth, bonusSynth, jackpotSynth, reelClickSynth;
+let winSynth, lossSynth, bonusSynth, jackpotSynth;
+let reelStopSynth;
 let spinNoise, spinFilter;
+let lastReelStopTime = 0;
 
 async function init() {
   if (initialized) return;
@@ -11,11 +13,11 @@ async function init() {
 
   masterVol = new Tone.Volume(-6).toDestination();
 
-  // Reel click — short percussive tick
-  reelClickSynth = new Tone.MembraneSynth({
-    pitchDecay: 0.008,
-    octaves: 2,
-    envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01 },
+  // Reel stop — use PolySynth so multiple stops don't collide
+  reelStopSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: 'sine' },
+    envelope: { attack: 0.001, decay: 0.08, sustain: 0, release: 0.05 },
+    volume: -8,
   }).connect(masterVol);
 
   // Spin noise — filtered white noise
@@ -34,9 +36,10 @@ async function init() {
   }).connect(masterVol);
 
   // Loss — low thud
-  lossSynth = new Tone.Synth({
+  lossSynth = new Tone.PolySynth(Tone.Synth, {
     oscillator: { type: 'sine' },
     envelope: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.3 },
+    volume: -4,
   }).connect(masterVol);
 
   // Bonus fanfare
@@ -62,16 +65,13 @@ export const audio = {
     await init();
   },
 
-  reelClick() {
-    if (!initialized) return;
-    reelClickSynth.triggerAttackRelease('C2', '32n', undefined, 0.3);
-  },
-
   startSpin() {
     if (!initialized) return;
-    spinFilter.start();
-    spinNoise.start();
-    spinNoise.volume.value = -12;
+    try {
+      spinFilter.start();
+      spinNoise.start();
+      spinNoise.volume.value = -12;
+    } catch {}
   },
 
   stopSpin() {
@@ -82,55 +82,61 @@ export const audio = {
 
   reelStop() {
     if (!initialized) return;
-    reelClickSynth.triggerAttackRelease('G2', '16n', undefined, 0.6);
+    try {
+      // Ensure each reel stop is scheduled after the previous one
+      const now = Tone.now();
+      const time = Math.max(now, lastReelStopTime + 0.05);
+      lastReelStopTime = time;
+      reelStopSynth.triggerAttackRelease('G3', '32n', time, 0.5);
+    } catch {}
   },
 
   win(multiplier = 1) {
     if (!initialized) return;
-    const now = Tone.now();
-    const notes = multiplier >= 10
-      ? ['C5', 'E5', 'G5', 'C6', 'E6']
-      : ['C4', 'E4', 'G4', 'C5'];
-    notes.forEach((note, i) => {
-      winSynth.triggerAttackRelease(note, '8n', now + i * 0.1);
-    });
+    try {
+      const now = Tone.now();
+      const notes = multiplier >= 10
+        ? ['C5', 'E5', 'G5', 'C6', 'E6']
+        : ['C4', 'E4', 'G4', 'C5'];
+      notes.forEach((note, i) => {
+        winSynth.triggerAttackRelease(note, '8n', now + i * 0.1);
+      });
+    } catch {}
   },
 
   loss() {
     if (!initialized) return;
-    lossSynth.triggerAttackRelease('C2', '8n', undefined, 0.3);
+    try {
+      lossSynth.triggerAttackRelease('C2', '8n', Tone.now(), 0.3);
+    } catch {}
   },
 
   bonus() {
     if (!initialized) return;
-    const now = Tone.now();
-    const fanfare = ['C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'];
-    fanfare.forEach((note, i) => {
-      bonusSynth.triggerAttackRelease(note, '4n', now + i * 0.12, 0.5);
-    });
+    try {
+      const now = Tone.now();
+      const fanfare = ['C4', 'E4', 'G4', 'C5', 'E5', 'G5', 'C6'];
+      fanfare.forEach((note, i) => {
+        bonusSynth.triggerAttackRelease(note, '4n', now + i * 0.12, 0.5);
+      });
+    } catch {}
   },
 
   jackpot() {
     if (!initialized) return;
-    const now = Tone.now();
-    // Epic ascending chord progression
-    const chords = [
-      ['C4', 'E4', 'G4'],
-      ['D4', 'F#4', 'A4'],
-      ['E4', 'G#4', 'B4'],
-      ['F4', 'A4', 'C5'],
-      ['G4', 'B4', 'D5'],
-      ['C5', 'E5', 'G5'],
-    ];
-    chords.forEach((chord, i) => {
-      jackpotSynth.triggerAttackRelease(chord, '2n', now + i * 0.3, 0.6);
-    });
-  },
-
-  bonusSpin() {
-    if (!initialized) return;
-    const now = Tone.now();
-    winSynth.triggerAttackRelease('E5', '16n', now, 0.3);
-    winSynth.triggerAttackRelease('G5', '16n', now + 0.05, 0.3);
+    try {
+      const now = Tone.now();
+      const chords = [
+        ['C4', 'E4', 'G4'],
+        ['D4', 'F#4', 'A4'],
+        ['E4', 'G#4', 'B4'],
+        ['F4', 'A4', 'C5'],
+        ['G4', 'B4', 'D5'],
+        ['C5', 'E5', 'G5'],
+      ];
+      chords.forEach((chord, i) => {
+        jackpotSynth.triggerAttackRelease(chord, '2n', now + i * 0.3, 0.6);
+      });
+    } catch {}
   },
 };
