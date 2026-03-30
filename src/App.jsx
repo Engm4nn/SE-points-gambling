@@ -8,6 +8,7 @@ import SlotMachine from './components/SlotMachine';
 import Blackjack from './components/Blackjack';
 import Roulette from './components/Roulette';
 import Plinko from './components/Plinko';
+import GameInfo from './components/GameInfo';
 import TwitchEmbed from './components/TwitchEmbed';
 import Leaderboard from './components/Leaderboard';
 import SpinHistory from './components/SpinHistory';
@@ -204,6 +205,7 @@ export default function App() {
                   <div className="tab-content">
                     {tab === 'game' && (
                       <div className="layout-slots">
+                        <GameInfo game={activeGame} />
                         {activeGame === 'slots' && (
                           <SlotMachine
                             {...sharedGameProps}

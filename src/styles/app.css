@@ -455,6 +455,7 @@ input:focus-visible {
   justify-content: center;
   padding: var(--sp-4);
   background: radial-gradient(ellipse at 50% 30%, rgba(124, 58, 237, 0.04) 0%, transparent 60%);
+  position: relative;
 }
 
 /* ===== TWITCH EMBED ===== */
@@ -1153,6 +1154,112 @@ input:focus-visible {
   color: var(--signal-hot);
   margin-top: var(--sp-2);
   letter-spacing: 2px;
+}
+
+/* ===== GAME INFO ===== */
+.game-info-btn {
+  position: absolute;
+  top: var(--sp-2);
+  right: var(--sp-2);
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  padding: var(--sp-1);
+  border-radius: 50%;
+  transition: color var(--t-fast) var(--ease-out);
+  z-index: 5;
+}
+
+.game-info-btn:hover {
+  color: var(--ink-secondary);
+}
+
+.game-info-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 26, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.game-info-panel {
+  background: var(--panel);
+  border: 1px solid var(--bezel-strong);
+  border-radius: var(--r-xl);
+  padding: var(--sp-6);
+  width: 90%;
+  max-width: 360px;
+  position: relative;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.game-info-close {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  background: none;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+}
+
+.game-info-close:hover {
+  color: var(--ink);
+}
+
+.game-info-title {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.2rem;
+  color: var(--phosphor);
+  margin-bottom: var(--sp-1);
+}
+
+.game-info-rtp {
+  font-size: 0.8rem;
+  color: var(--discharge);
+  font-weight: 700;
+  margin-bottom: var(--sp-4);
+}
+
+.game-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: var(--sp-4);
+  font-size: 0.8rem;
+}
+
+.game-info-table th {
+  text-align: left;
+  color: var(--ink-tertiary);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: var(--sp-1) var(--sp-2);
+  border-bottom: 1px solid var(--bezel);
+}
+
+.game-info-table td {
+  padding: var(--sp-2);
+  border-bottom: 1px solid var(--bezel-soft);
+  color: var(--ink-secondary);
+}
+
+.game-info-table td:last-child {
+  text-align: right;
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-info-notes {
+  font-size: 0.75rem;
+  color: var(--ink-tertiary);
+  line-height: 1.6;
 }
 
 /* ===== BONUS WHEEL ===== */
