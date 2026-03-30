@@ -9,12 +9,14 @@ import Leaderboard from './components/Leaderboard';
 import SpinHistory from './components/SpinHistory';
 import { ToastContainer, createToast } from './components/Toast';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { LS_KEYS, LEADERBOARD_MAX, HISTORY_MAX, JACKPOT_SEED, CHANNEL_NAME } from './utils/constants';
+import { LS_KEYS, HISTORY_MAX, CHANNEL_NAME } from './utils/constants';
 import { getChannelId } from './utils/api';
+import { fetchJackpot } from './utils/jackpotApi';
+import { fetchLeaderboard } from './utils/leaderboardApi';
+import { startVersionPolling } from './utils/versionCheck';
 import './styles/app.css';
 
 let historyId = 0;
-let lbId = 0;
 
 export default function App() {
   const [ready, setReady] = useState(false);
@@ -24,18 +26,42 @@ export default function App() {
   const [avatar, setAvatar] = useLocalStorage('se_slots_avatar', '');
   const [balance, setBalance] = useState(0);
   const [loggedIn, setLoggedIn] = useState(false);
-  const [tab, setTab] = useState('slots'); // 'slots' | 'history' | 'leaderboard'
+  const [tab, setTab] = useState('slots');
 
-  const [leaderboard, setLeaderboard] = useLocalStorage(LS_KEYS.LEADERBOARD, []);
+  const [leaderboard, setLeaderboard] = useState([]);
   const [history, setHistory] = useLocalStorage(LS_KEYS.HISTORY, []);
-  const [jackpot, setJackpot] = useLocalStorage(LS_KEYS.JACKPOT, JACKPOT_SEED);
+  const [jackpot, setJackpot] = useState(5000);
   const [toasts, setToasts] = useState([]);
 
+  // Init: check SE connection, fetch global jackpot, start version polling
   useEffect(() => {
-    getChannelId()
+    Promise.all([
+      getChannelId(),
+      fetchJackpot().then(j => setJackpot(j)),
+    ])
       .then(() => setReady(true))
-      .catch(() => setConfigError('Could not connect to StreamElements. Check server config.'));
+      .catch(() => setConfigError('Could not connect. Check server config.'));
+
+    startVersionPolling();
   }, []);
+
+  // Refresh leaderboard periodically
+  useEffect(() => {
+    if (!ready) return;
+    const load = () => fetchLeaderboard('top3', 10).then(setLeaderboard).catch(() => {});
+    load();
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
+  }, [ready]);
+
+  // Refresh jackpot periodically
+  useEffect(() => {
+    if (!ready) return;
+    const interval = setInterval(() => {
+      fetchJackpot().then(j => setJackpot(j)).catch(() => {});
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [ready]);
 
   const showToast = useCallback((message, type) => {
     const toast = createToast(message, type);
@@ -58,18 +84,6 @@ export default function App() {
     const entry = { id: ++historyId, symbols, net, type, timestamp: Date.now() };
     setHistory(prev => [entry, ...prev].slice(0, HISTORY_MAX));
   }, [setHistory]);
-
-  const addLeaderboardEntry = useCallback((user, amount, label) => {
-    const entry = { id: ++lbId, username: user, amount, label, timestamp: Date.now() };
-    setLeaderboard(prev => {
-      const next = [...prev, entry].sort((a, b) => b.amount - a.amount).slice(0, LEADERBOARD_MAX);
-      return next;
-    });
-  }, [setLeaderboard]);
-
-  const resetLeaderboard = useCallback(() => {
-    setLeaderboard([]);
-  }, [setLeaderboard]);
 
   // Config error
   if (configError) {
@@ -98,7 +112,7 @@ export default function App() {
         <div className="setup-overlay">
           <div className="setup-panel" style={{ textAlign: 'center' }}>
             <span className="spinner" />
-            <p className="setup-desc" style={{ marginTop: 16 }}>Connecting to StreamElements...</p>
+            <p className="setup-desc" style={{ marginTop: 16 }}>Connecting...</p>
           </div>
         </div>
       </div>
@@ -134,7 +148,6 @@ export default function App() {
                 </div>
 
                 <div className="layout-right">
-                  {/* Tab bar */}
                   <div className="tab-bar">
                     <button
                       className={`tab-btn ${tab === 'slots' ? 'tab-active' : ''}`}
@@ -156,7 +169,6 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Tab content */}
                   <div className="tab-content">
                     {tab === 'slots' && (
                       <div className="layout-slots">
@@ -167,7 +179,6 @@ export default function App() {
                           jackpot={jackpot}
                           setJackpot={setJackpot}
                           addHistory={addHistory}
-                          addLeaderboardEntry={addLeaderboardEntry}
                           showToast={showToast}
                         />
                       </div>
@@ -179,11 +190,7 @@ export default function App() {
                     )}
                     {tab === 'leaderboard' && (
                       <div className="tab-page">
-                        <Leaderboard
-                          entries={leaderboard}
-                          onReset={resetLeaderboard}
-                          isStreamer={false}
-                        />
+                        <Leaderboard entries={leaderboard} />
                       </div>
                     )}
                   </div>

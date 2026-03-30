@@ -44,17 +44,14 @@ export const SYMBOLS_PER_STRIP = 40;
 export const SPIN_DURATION_BASE = 1500;
 export const SPIN_STAGGER = 300;
 
-// Leaderboard
-export const LEADERBOARD_MAX = 10;
+// History
 export const HISTORY_MAX = 20;
 
 // Channel name for Twitch embed (public, no secret)
 export const CHANNEL_NAME = import.meta.env.VITE_CHANNEL_NAME || '';
 
-// LocalStorage keys
+// LocalStorage keys (jackpot + leaderboard now in database)
 export const LS_KEYS = {
   USERNAME: 'se_slots_username',
-  LEADERBOARD: 'se_slots_leaderboard',
   HISTORY: 'se_slots_history',
-  JACKPOT: 'se_slots_jackpot',
 };

@@ -9,11 +9,13 @@ import { spinReels, evaluateWin, isBonusTriggered, isNearMiss } from '../utils/s
 import { deductPoints, addPoints } from '../utils/api';
 import { audio } from '../utils/audio';
 import { sendChatMessage, formatWinMessage, shouldAnnounce } from '../utils/chatBot';
+import { reportSpin } from '../utils/leaderboardApi';
+import { contributeToJackpot, winJackpot } from '../utils/jackpotApi';
 import { Trophy, Sparkles } from 'lucide-react';
 
 const BONUS_SPINS = 3;
 
-export default function SlotMachine({ balance, setBalance, username, jackpot, setJackpot, addHistory, addLeaderboardEntry, showToast }) {
+export default function SlotMachine({ balance, setBalance, username, jackpot, setJackpot, addHistory, showToast }) {
   const [spinning, setSpinning] = useState(false);
   const [results, setResults] = useState([null, null, null]);
   const [bet, setBet] = useState(10);
@@ -32,12 +34,9 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('streamslots_wins') : null
   );
 
-  // Keep ref in sync so callbacks see latest value
   autoSpinRef.current = autoSpin;
 
   const canSpin = !spinning && !showWheel && (bonusMode ? bonusSpinsLeft > 0 : balance >= bet);
-
-  // Turbo timing
   const spinBase = turbo ? 500 : SPIN_DURATION_BASE;
   const spinStagger = turbo ? 100 : SPIN_STAGGER;
 
@@ -105,10 +104,9 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
       const res = currentResults.current;
 
-      // Bonus trigger → wheel
       if (isBonusTriggered(res)) {
         audio.bonus();
-        setAutoSpin(false); // pause autospin for wheel
+        setAutoSpin(false);
         setShowWheel(true);
         return;
       }
@@ -122,17 +120,21 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
       if (winResult.type === 'jackpot') {
         audio.jackpot();
-        const jackpotWin = bonusMode ? Math.floor(jackpot * bonusMultiplier) : jackpot;
-        setBalance(prev => prev + jackpotWin);
-        addPoints(username, jackpotWin).catch(() => {});
-        setJackpot(JACKPOT_SEED);
-        setLastWin({ ...winResult, amount: jackpotWin });
-        addHistory(res, jackpotWin, 'jackpot');
-        addLeaderboardEntry(username, jackpotWin, 'JACKPOT');
-        showToast(`JACKPOT! +${jackpotWin.toLocaleString()} pts!`, 'jackpot');
-        const siteUrl = window.location.origin;
-        sendChatMessage(formatWinMessage(username, jackpotWin, null, 'jackpot', siteUrl));
-        broadcastChannel.current?.postMessage({ type: 'jackpot', username, amount: jackpotWin });
+        // Win global jackpot
+        winJackpot().then(data => {
+          if (data) {
+            const jackpotWin = bonusMode ? Math.floor(data.won * bonusMultiplier) : data.won;
+            setBalance(prev => prev + jackpotWin);
+            addPoints(username, jackpotWin).catch(() => {});
+            setJackpot(data.jackpot);
+            setLastWin({ ...winResult, amount: jackpotWin });
+            addHistory(res, jackpotWin, 'jackpot');
+            showToast(`JACKPOT! +${jackpotWin.toLocaleString()} pts!`, 'jackpot');
+            const siteUrl = window.location.origin;
+            sendChatMessage(formatWinMessage(username, jackpotWin, null, 'jackpot', siteUrl));
+            broadcastChannel.current?.postMessage({ type: 'jackpot', username, amount: jackpotWin });
+          }
+        });
       } else if (winResult.winAmount > 0) {
         audio.win(winResult.multiplier);
         setBalance(prev => prev + winResult.winAmount);
@@ -141,9 +143,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
         const effectiveMult = bonusMode ? winResult.multiplier * bonusMultiplier : winResult.multiplier;
         const winType = effectiveMult >= 25 ? 'mega' : effectiveMult >= 10 ? 'big' : 'win';
         addHistory(res, winResult.winAmount - (bonusMode ? 0 : bet), winType === 'mega' ? 'mega' : 'win');
-        if (winResult.winAmount >= bet * 5) {
-          addLeaderboardEntry(username, winResult.winAmount, winResult.label);
-        }
         showToast(`+${winResult.winAmount.toLocaleString()} pts!`, winType === 'mega' ? 'mega' : 'win');
         if (shouldAnnounce(winResult.winAmount, bet, winType)) {
           const siteUrl = window.location.origin;
@@ -153,17 +152,27 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
       } else {
         audio.loss();
         if (!bonusMode) {
-          setJackpot(prev => prev + Math.floor(bet * JACKPOT_CONTRIBUTION_RATE));
+          // Contribute to global jackpot
+          const contribution = Math.floor(bet * JACKPOT_CONTRIBUTION_RATE);
+          if (contribution > 0) {
+            contributeToJackpot(contribution).then(newJp => {
+              if (newJp) setJackpot(newJp);
+            });
+          }
         }
         setLastWin(null);
         addHistory(res, bonusMode ? 0 : -bet, 'loss');
+      }
+
+      // Report spin to leaderboard DB (fire and forget)
+      if (!bonusMode) {
+        reportSpin(username, bet, winResult.winAmount || 0);
       }
 
       if (isNearMiss(res)) {
         setNearMiss(true);
       }
 
-      // Bonus countdown
       if (bonusMode) {
         setBonusSpinsLeft(prev => {
           const next = prev - 1;
@@ -176,30 +185,24 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
         });
       }
     }
-  }, [bonusMode, bonusMultiplier, bet, jackpot, username, setBalance, setJackpot, addHistory, addLeaderboardEntry, showToast]);
+  }, [bonusMode, bonusMultiplier, bet, jackpot, username, setBalance, setJackpot, addHistory, showToast]);
 
   const handleBonusBuy = useCallback(() => {
     handleSpin(true);
   }, [handleSpin]);
 
-  // Autospin: trigger next spin after current one finishes
+  // Autospin
   useEffect(() => {
     if (!autoSpinRef.current || spinning || showWheel) return;
-
-    // Check if we can still spin
     const canAutoSpin = bonusMode ? bonusSpinsLeft > 0 : balance >= bet;
     if (!canAutoSpin) {
       setAutoSpin(false);
       return;
     }
-
     const delay = turbo ? 200 : 600;
     const timer = setTimeout(() => {
-      if (autoSpinRef.current) {
-        handleSpin();
-      }
+      if (autoSpinRef.current) handleSpin();
     }, delay);
-
     return () => clearTimeout(timer);
   }, [spinning, autoSpin, showWheel, bonusMode, bonusSpinsLeft, balance, bet, turbo, handleSpin]);
 
@@ -263,9 +266,7 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
       />
 
       <AnimatePresence>
-        {showWheel && (
-          <BonusWheel onResult={handleWheelResult} />
-        )}
+        {showWheel && <BonusWheel onResult={handleWheelResult} />}
       </AnimatePresence>
     </div>
   );
