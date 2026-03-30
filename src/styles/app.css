@@ -454,6 +454,7 @@ input:focus-visible {
   gap: var(--sp-3);
   width: 100%;
   max-width: 420px;
+  position: relative;
 }
 
 /* --- Jackpot: the prize counter at the top of the cabinet --- */
@@ -896,10 +897,15 @@ input:focus-visible {
 /* ===== WIN DISPLAY ===== */
 .win-display {
   text-align: center;
-  padding: var(--sp-4) var(--sp-8);
+  padding: var(--sp-3) var(--sp-6);
   border-radius: var(--r-lg);
-  position: relative;
-  overflow: visible;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
 }
 
 .normal-win {
