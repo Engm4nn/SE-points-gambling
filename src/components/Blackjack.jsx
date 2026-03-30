@@ -144,6 +144,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     while (dealerShouldHit(dCards)) {
       await delay(500);
       dCards = [...dCards, draw()];
+      audio.cardDeal();
       setDealerCards([...dCards]);
     }
 
@@ -197,6 +198,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     while (dealerShouldHit(dCards)) {
       await delay(500);
       dCards = [...dCards, draw()];
+      audio.cardDeal();
       setDealerCards([...dCards]);
     }
 
