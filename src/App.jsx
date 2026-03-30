@@ -52,6 +52,15 @@ export default function App() {
     setShowSetup(false);
   }, [setStoredChannel, setStoredJwt]);
 
+  const showToast = useCallback((message, type) => {
+    const toast = createToast(message, type);
+    setToasts(prev => [...prev.slice(-4), toast]);
+  }, []);
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+
   // Generate the shareable viewer link
   const viewerLink = useMemo(() => {
     if (!channel || !jwt) return '';
@@ -73,15 +82,6 @@ export default function App() {
     setBalance(points);
     setLoggedIn(true);
   }, [setUsername]);
-
-  const showToast = useCallback((message, type) => {
-    const toast = createToast(message, type);
-    setToasts(prev => [...prev.slice(-4), toast]);
-  }, []);
-
-  const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
 
   const addHistory = useCallback((symbols, net, type) => {
     const entry = { id: ++historyId, symbols, net, type, timestamp: Date.now() };
