@@ -11,7 +11,7 @@ import { audio } from '../utils/audio';
 import { sendChatMessage, formatWinMessage, shouldAnnounce } from '../utils/chatBot';
 import { Trophy, Sparkles } from 'lucide-react';
 
-export default function SlotMachine({ balance, setBalance, channel, username, jwt, jackpot, setJackpot, addHistory, addLeaderboardEntry, showToast }) {
+export default function SlotMachine({ balance, setBalance, channelId, username, jwt, jackpot, setJackpot, addHistory, addLeaderboardEntry, showToast }) {
   const [spinning, setSpinning] = useState(false);
   const [results, setResults] = useState([null, null, null]);
   const [bet, setBet] = useState(100);
@@ -50,7 +50,7 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
 
     // API deduct
     try {
-      await deductPoints(channel, username, actualBet, jwt);
+      await deductPoints(channelId, username, actualBet, jwt);
     } catch (err) {
       // Refund on API error
       setBalance(prev => prev + actualBet);
@@ -69,7 +69,7 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
       ];
       setResults(currentResults.current);
     }
-  }, [spinning, bet, balance, channel, username, jwt, showToast, setBalance]);
+  }, [spinning, bet, balance, channelId, username, jwt, showToast, setBalance]);
 
   const handleReelStop = useCallback((reelIndex) => {
     stoppedReels.current += 1;
@@ -103,7 +103,7 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
       if (winResult.type === 'jackpot') {
         audio.jackpot();
         setBalance(prev => prev + jackpot);
-        addPoints(channel, username, jackpot, jwt).catch(() => {});
+        addPoints(channelId, username, jackpot, jwt).catch(() => {});
         setJackpot(JACKPOT_SEED);
         setLastWin({ ...winResult, amount: jackpot });
         addHistory(res, jackpot, 'jackpot');
@@ -111,12 +111,12 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
         showToast(`JACKPOT! +${jackpot.toLocaleString()} pts!`, 'jackpot');
         // Chat + overlay announce
         const siteUrl = window.location.origin;
-        sendChatMessage(channel, jwt, formatWinMessage(username, jackpot, null, 'jackpot', siteUrl));
+        sendChatMessage(channelId, jwt, formatWinMessage(username, jackpot, null, 'jackpot', siteUrl));
         broadcastChannel.current?.postMessage({ type: 'jackpot', username, amount: jackpot });
       } else if (winResult.winAmount > 0) {
         audio.win(winResult.multiplier);
         setBalance(prev => prev + winResult.winAmount);
-        addPoints(channel, username, winResult.winAmount, jwt).catch(() => {});
+        addPoints(channelId, username, winResult.winAmount, jwt).catch(() => {});
         setLastWin({ ...winResult, amount: winResult.winAmount });
         const winType = winResult.multiplier >= 25 ? 'mega' : winResult.multiplier >= 10 ? 'big' : 'win';
         addHistory(res, winResult.winAmount - bet, winType === 'mega' ? 'mega' : 'win');
@@ -127,7 +127,7 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
         // Announce big wins in chat + overlay
         if (shouldAnnounce(winResult.winAmount, bet, winType)) {
           const siteUrl = window.location.origin;
-          sendChatMessage(channel, jwt, formatWinMessage(username, winResult.winAmount, winResult.multiplier, winType, siteUrl));
+          sendChatMessage(channelId, jwt, formatWinMessage(username, winResult.winAmount, winResult.multiplier, winType, siteUrl));
           broadcastChannel.current?.postMessage({ type: winType, username, amount: winResult.winAmount, multiplier: winResult.multiplier });
         }
       } else {
@@ -159,7 +159,7 @@ export default function SlotMachine({ balance, setBalance, channel, username, jw
         }
       }
     }
-  }, [bonusMode, bonusSpinsLeft, bet, jackpot, channel, username, jwt, setBalance, setJackpot, addHistory, addLeaderboardEntry, showToast, handleSpin]);
+  }, [bonusMode, bonusSpinsLeft, bet, jackpot, channelId, username, jwt, setBalance, setJackpot, addHistory, addLeaderboardEntry, showToast, handleSpin]);
 
   const handleBonusBuy = useCallback(() => {
     handleSpin(true);

@@ -1,9 +1,9 @@
 const SE_BASE = 'https://api.streamelements.com/kappa/v2';
 
 // Send a message to SE chat bot
-export async function sendChatMessage(channel, jwt, message) {
+export async function sendChatMessage(channelId, jwt, message) {
   try {
-    const res = await fetch(`${SE_BASE}/bot/${channel}/say`, {
+    const res = await fetch(`${SE_BASE}/bot/${channelId}/say`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${jwt}`,

@@ -51,10 +51,12 @@ export const SPIN_STAGGER = 300;
 export const LEADERBOARD_MAX = 10;
 export const HISTORY_MAX = 20;
 
+// Channel config — set via Vercel env vars
+export const CHANNEL_NAME = import.meta.env.VITE_CHANNEL_NAME || '';
+export const SE_JWT = import.meta.env.VITE_SE_JWT || '';
+
 // LocalStorage keys
 export const LS_KEYS = {
-  CHANNEL: 'se_slots_channel',
-  JWT: 'se_slots_jwt',
   USERNAME: 'se_slots_username',
   LEADERBOARD: 'se_slots_leaderboard',
   HISTORY: 'se_slots_history',

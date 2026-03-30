@@ -1,7 +1,22 @@
 const SE_BASE = 'https://api.streamelements.com/kappa/v2';
 
-export async function fetchPoints(channel, username, jwt) {
-  const res = await fetch(`${SE_BASE}/points/${channel}/${username}`, {
+let cachedChannelId = null;
+
+// Resolve channel name to SE channel ID
+export async function getChannelId(channelName, jwt) {
+  if (cachedChannelId) return cachedChannelId;
+
+  const res = await fetch(`${SE_BASE}/channels/${channelName}`, {
+    headers: { Authorization: `Bearer ${jwt}` },
+  });
+  if (!res.ok) throw new Error(`Could not find SE channel: ${res.status}`);
+  const data = await res.json();
+  cachedChannelId = data._id;
+  return cachedChannelId;
+}
+
+export async function fetchPoints(channelId, username, jwt) {
+  const res = await fetch(`${SE_BASE}/points/${channelId}/${username}`, {
     headers: { Authorization: `Bearer ${jwt}` },
   });
   if (!res.ok) throw new Error(`SE API error: ${res.status}`);
@@ -9,10 +24,10 @@ export async function fetchPoints(channel, username, jwt) {
   return data.points ?? 0;
 }
 
-export async function updatePoints(channel, username, amount, jwt) {
+export async function updatePoints(channelId, username, amount, jwt) {
   const endpoint = amount >= 0
-    ? `${SE_BASE}/points/${channel}/${username}/${Math.abs(amount)}`
-    : `${SE_BASE}/points/${channel}/${username}/-${Math.abs(amount)}`;
+    ? `${SE_BASE}/points/${channelId}/${username}/${Math.abs(amount)}`
+    : `${SE_BASE}/points/${channelId}/${username}/-${Math.abs(amount)}`;
 
   const res = await fetch(endpoint, {
     method: 'PUT',
@@ -28,10 +43,10 @@ export async function updatePoints(channel, username, amount, jwt) {
   return res.json();
 }
 
-export async function deductPoints(channel, username, amount, jwt) {
-  return updatePoints(channel, username, -Math.abs(amount), jwt);
+export async function deductPoints(channelId, username, amount, jwt) {
+  return updatePoints(channelId, username, -Math.abs(amount), jwt);
 }
 
-export async function addPoints(channel, username, amount, jwt) {
-  return updatePoints(channel, username, Math.abs(amount), jwt);
+export async function addPoints(channelId, username, amount, jwt) {
+  return updatePoints(channelId, username, Math.abs(amount), jwt);
 }
