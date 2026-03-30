@@ -1,0 +1,62 @@
+// Slot symbols ordered by rarity (rarest first)
+export const SYMBOLS = [
+  { id: 'seven',   emoji: '7️⃣',  weight: 2,  label: '7' },
+  { id: 'diamond', emoji: '💎', weight: 5,  label: 'Diamond' },
+  { id: 'bell',    emoji: '🔔', weight: 10, label: 'Bell' },
+  { id: 'cherry',  emoji: '🍒', weight: 15, label: 'Cherry' },
+  { id: 'lemon',   emoji: '🍋', weight: 20, label: 'Lemon' },
+  { id: 'orange',  emoji: '🍊', weight: 22, label: 'Orange' },
+  { id: 'bar',     emoji: '🎰', weight: 26, label: 'Bar' },
+];
+
+export const BONUS_SYMBOL = { id: 'bonus', emoji: '🃏', weight: 0, label: 'Bonus' };
+
+// Win multipliers
+export const WIN_TABLE = [
+  { match: 'three_seven',   ids: ['seven'],   count: 3, multiplier: 'jackpot', label: '3× 7️⃣ — JACKPOT' },
+  { match: 'three_diamond', ids: ['diamond'], count: 3, multiplier: 25, label: '3× 💎 — 25×' },
+  { match: 'three_bell',    ids: ['bell'],    count: 3, multiplier: 10, label: '3× 🔔 — 10×' },
+  { match: 'three_cherry',  ids: ['cherry'],  count: 3, multiplier: 5,  label: '3× 🍒 — 5×' },
+  { match: 'three_any',     ids: null,        count: 3, multiplier: 3,  label: '3× Any — 3×' },
+  { match: 'two_seven',     ids: ['seven'],   count: 2, multiplier: 2,  label: '2× 7️⃣ — 2×' },
+  { match: 'two_diamond',   ids: ['diamond'], count: 2, multiplier: 1.5, label: '2× 💎 — 1.5×' },
+  { match: 'two_any',       ids: null,        count: 2, multiplier: 1.2, label: '2× Any — 1.2×' },
+];
+
+// Bet presets
+export const BET_PRESETS = [100, 500, 1000, 5000];
+export const MAX_BET_PERCENT = 0.10;
+export const MAX_BET_CAP = 10000;
+
+// Bonus
+export const BONUS_BUY_MULTIPLIER = 10;
+export const BONUS_FREE_SPINS = 10;
+export const BONUS_WIN_MULTIPLIER = 3;
+export const BONUS_TRIGGER_CHANCE = 0.03; // 3% per reel
+
+// Jackpot
+export const JACKPOT_CONTRIBUTION_RATE = 0.01; // 1% of each loss
+export const JACKPOT_SEED = 5000;
+
+// Reel config
+export const REEL_COUNT = 3;
+export const VISIBLE_ROWS = 5;
+export const SYMBOLS_PER_STRIP = 40;
+
+// Animation timing (ms)
+export const SPIN_DURATION_BASE = 1500;
+export const SPIN_STAGGER = 300;
+
+// Leaderboard
+export const LEADERBOARD_MAX = 10;
+export const HISTORY_MAX = 20;
+
+// LocalStorage keys
+export const LS_KEYS = {
+  CHANNEL: 'se_slots_channel',
+  JWT: 'se_slots_jwt',
+  USERNAME: 'se_slots_username',
+  LEADERBOARD: 'se_slots_leaderboard',
+  HISTORY: 'se_slots_history',
+  JACKPOT: 'se_slots_jackpot',
+};
