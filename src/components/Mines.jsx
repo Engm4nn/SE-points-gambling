@@ -127,77 +127,7 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
   return (
     <div className="mines-game">
       {/* Setup controls */}
-      {phase === PHASES.SETUP && (
-        <div className="mn-setup">
-          <div className="mn-row">
-            <span className="mn-label">Mines:</span>
-            <div className="mn-mine-btns">
-              {MINE_PRESETS.map(m => (
-                <button
-                  key={m}
-                  className={`bet-btn ${mineCount === m ? 'active' : ''}`}
-                  onClick={() => setMineCount(m)}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="mn-row">
-            <span className="mn-label">Bet:</span>
-            <div className="mn-mine-btns">
-              {BET_PRESETS.map(amount => (
-                <button
-                  key={amount}
-                  className={`bet-btn ${bet === amount && !customBet ? 'active' : ''}`}
-                  onClick={() => { setBet(amount); setCustomBet(''); }}
-                  disabled={amount > balance}
-                >
-                  {amount.toLocaleString()}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="mn-row">
-            <span className="mn-label">Custom:</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              className="bet-custom-input"
-              placeholder={bet.toLocaleString()}
-              value={customBet}
-              onChange={handleCustomBet}
-            />
-          </div>
-          <button
-            className="spin-btn"
-            onClick={handleStart}
-            disabled={balance < bet || bet < MIN_BET}
-          >
-            START ({bet.toLocaleString()})
-          </button>
-        </div>
-      )}
-
-      {/* Game info bar */}
-      {phase === PHASES.PLAYING && (
-        <div className="mn-info-bar">
-          <div className="mn-stat">
-            <span className="mn-stat-label">Multiplier</span>
-            <span className="mn-stat-value mn-mult">{currentMultiplier}x</span>
-          </div>
-          <div className="mn-stat">
-            <span className="mn-stat-label">Next</span>
-            <span className="mn-stat-value">{nextMult}x</span>
-          </div>
-          <div className="mn-stat">
-            <span className="mn-stat-label">Safe</span>
-            <span className="mn-stat-value">{Math.round(safeChance * 100)}%</span>
-          </div>
-        </div>
-      )}
-
-      {/* Grid */}
+      {/* Grid — always in the same position */}
       <div className="mn-grid">
         {Array.from({ length: GRID_SIZE }, (_, i) => {
           const isRevealed = revealed.has(i);
@@ -209,6 +139,7 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
           if (isRevealed) tileClass += ' mn-safe';
           if (isHit) tileClass += ' mn-hit';
           else if (showMine) tileClass += ' mn-mine-reveal';
+          if (phase === PHASES.SETUP) tileClass += ' mn-idle';
           const clickable = phase === PHASES.PLAYING && !isRevealed;
 
           return (
@@ -227,19 +158,94 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
         })}
       </div>
 
-      {/* Cashout / Result */}
-      {phase === PHASES.PLAYING && revealed.size > 0 && (
-        <button className="mn-cashout-btn" onClick={handleCashout}>
-          <DollarSign size={18} />
-          CASH OUT {Math.floor(betRef.current * currentMultiplier).toLocaleString()} pts ({currentMultiplier}x)
-        </button>
-      )}
+      {/* Controls — always below the grid */}
+      <div className="mn-controls">
+        {/* Info bar (during game) */}
+        {phase === PHASES.PLAYING && (
+          <div className="mn-info-bar">
+            <div className="mn-stat">
+              <span className="mn-stat-label">Multiplier</span>
+              <span className="mn-stat-value mn-mult">{currentMultiplier}x</span>
+            </div>
+            <div className="mn-stat">
+              <span className="mn-stat-label">Next</span>
+              <span className="mn-stat-value">{nextMult}x</span>
+            </div>
+            <div className="mn-stat">
+              <span className="mn-stat-label">Safe</span>
+              <span className="mn-stat-value">{Math.round(safeChance * 100)}%</span>
+            </div>
+          </div>
+        )}
 
-      {phase === PHASES.RESULT && (
-        <button className="spin-btn" onClick={handleNewGame}>
-          NEW GAME
-        </button>
-      )}
+        {/* Cashout */}
+        {phase === PHASES.PLAYING && revealed.size > 0 && (
+          <button className="mn-cashout-btn" onClick={handleCashout}>
+            <DollarSign size={18} />
+            CASH OUT {Math.floor(betRef.current * currentMultiplier).toLocaleString()} pts ({currentMultiplier}x)
+          </button>
+        )}
+
+        {/* Setup controls */}
+        {phase === PHASES.SETUP && (
+          <div className="mn-setup">
+            <div className="mn-row">
+              <span className="mn-label">Mines:</span>
+              <div className="mn-mine-btns">
+                {MINE_PRESETS.map(m => (
+                  <button
+                    key={m}
+                    className={`bet-btn ${mineCount === m ? 'active' : ''}`}
+                    onClick={() => setMineCount(m)}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mn-row">
+              <span className="mn-label">Bet:</span>
+              <div className="mn-mine-btns">
+                {BET_PRESETS.map(amount => (
+                  <button
+                    key={amount}
+                    className={`bet-btn ${bet === amount && !customBet ? 'active' : ''}`}
+                    onClick={() => { setBet(amount); setCustomBet(''); }}
+                    disabled={amount > balance}
+                  >
+                    {amount.toLocaleString()}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mn-row">
+              <span className="mn-label">Custom:</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="bet-custom-input"
+                placeholder={bet.toLocaleString()}
+                value={customBet}
+                onChange={handleCustomBet}
+              />
+            </div>
+            <button
+              className="spin-btn"
+              onClick={handleStart}
+              disabled={balance < bet || bet < MIN_BET}
+            >
+              START ({bet.toLocaleString()})
+            </button>
+          </div>
+        )}
+
+        {/* New game */}
+        {phase === PHASES.RESULT && (
+          <button className="spin-btn" onClick={handleNewGame}>
+            NEW GAME
+          </button>
+        )}
+      </div>
     </div>
   );
 }

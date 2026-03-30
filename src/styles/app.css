@@ -2008,6 +2008,17 @@ input:focus-visible {
   opacity: 0.6;
 }
 
+.mn-idle {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.mn-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
 @keyframes mine-shake {
   0%, 100% { transform: translateX(0); }
   25% { transform: translateX(-3px); }
