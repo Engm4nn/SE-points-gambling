@@ -1886,87 +1886,156 @@ input:focus-visible {
   color: var(--phosphor);
 }
 
-/* ===== PLINKO ===== */
-.plinko-game {
+/* ===== MINES ===== */
+.mines-game {
   width: 100%;
   max-width: 420px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
-  align-items: center;
+  gap: var(--sp-3);
 }
 
-.pk-controls {
-  width: 100%;
+.mn-setup {
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
 }
 
-.pk-risk-row {
+.mn-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.mn-label {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--ink-tertiary);
+  min-width: 55px;
+}
+
+.mn-mine-btns {
   display: flex;
   gap: var(--sp-1);
+}
+
+/* Info bar during game */
+.mn-info-bar {
+  display: flex;
+  gap: var(--sp-2);
   justify-content: center;
 }
 
-.pk-risk-btn {
-  padding: var(--sp-2) var(--sp-4);
+.mn-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--panel);
+  border-radius: var(--r-md);
+  border: 1px solid var(--bezel);
+  min-width: 70px;
+}
+
+.mn-stat-label {
+  font-size: 0.6rem;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mn-stat-value {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.mn-mult {
+  color: var(--discharge);
+}
+
+/* 5x5 Grid */
+.mn-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--sp-1);
+}
+
+.mn-tile {
+  aspect-ratio: 1;
   border-radius: var(--r-md);
   border: 1px solid var(--bezel);
   background: var(--panel);
-  color: var(--ink-tertiary);
-  font-family: 'Russo One', sans-serif;
-  font-size: 0.65rem;
-  letter-spacing: 1px;
-  cursor: pointer;
-  transition: all var(--t-fast) var(--ease-out);
-}
-
-.pk-risk-btn:disabled { opacity: 0.4; cursor: default; }
-.pk-risk-active {
-  background: var(--phosphor);
-  border-color: var(--phosphor);
-  color: #fff;
-}
-
-.pk-bet-row {
+  color: var(--ink-muted);
   display: flex;
-  gap: var(--sp-1);
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: all var(--t-fast) var(--ease-out);
+  font-size: 0.9rem;
 }
 
-.pk-canvas-wrapper {
+.mn-tile:hover:not(:disabled) {
+  border-color: var(--phosphor);
+  background: var(--raised);
+}
+
+.mn-tile:disabled {
+  cursor: default;
+}
+
+.mn-safe {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--signal-go);
+}
+
+.mn-hit {
+  background: rgba(244, 63, 94, 0.3);
+  border-color: var(--signal-hot);
+  color: var(--signal-hot);
+  animation: mine-shake 0.3s ease;
+}
+
+.mn-mine-reveal {
+  background: rgba(244, 63, 94, 0.1);
+  border-color: rgba(244, 63, 94, 0.2);
+  color: var(--signal-stop);
+  opacity: 0.6;
+}
+
+@keyframes mine-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* Cashout button */
+.mn-cashout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-3) var(--sp-4);
+  background: linear-gradient(135deg, var(--signal-go), #059669);
+  color: #fff;
+  border: none;
   border-radius: var(--r-lg);
-  overflow: hidden;
-  border: 1px solid var(--bezel);
-}
-
-.pk-canvas {
-  display: block;
-  max-width: 100%;
-  height: auto;
-}
-
-.pk-result {
   font-family: 'Russo One', sans-serif;
   font-size: 0.9rem;
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--r-md);
-  text-align: center;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
 }
 
-.pk-result-win {
-  color: var(--signal-go);
-  background: rgba(52, 211, 153, 0.1);
-  border: 1px solid rgba(52, 211, 153, 0.2);
-}
-
-.pk-result-loss {
-  color: var(--signal-stop);
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.2);
+.mn-cashout-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(52, 211, 153, 0.3);
 }
 
 /* ===== RESPONSIVE ===== */

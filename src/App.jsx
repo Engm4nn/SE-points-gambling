@@ -8,7 +8,7 @@ import GameSelector from './components/GameSelector';
 import SlotMachine from './components/SlotMachine';
 import Blackjack from './components/Blackjack';
 import Roulette from './components/Roulette';
-import Plinko from './components/Plinko';
+import Mines from './components/Mines';
 import GameInfo from './components/GameInfo';
 import TwitchEmbed from './components/TwitchEmbed';
 import Leaderboard from './components/Leaderboard';
@@ -234,7 +234,7 @@ export default function App() {
                         )}
                         {activeGame === 'blackjack' && <Blackjack {...sharedGameProps} />}
                         {activeGame === 'roulette' && <Roulette {...sharedGameProps} />}
-                        {activeGame === 'plinko' && <Plinko {...sharedGameProps} />}
+                        {activeGame === 'mines' && <Mines {...sharedGameProps} />}
                       </div>
                     )}
                     {tab === 'history' && (

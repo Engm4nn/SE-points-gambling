@@ -41,15 +41,17 @@ const INFO = {
     ],
     notes: 'European single-zero wheel (37 numbers). You can place multiple bets per spin. House edge comes from the green 0.',
   },
-  plinko: {
-    title: 'Plinko',
-    rtp: '95%',
+  mines: {
+    title: 'Mines',
+    rtp: '97%',
     rows: [
-      ['Low risk', '0.5× – 5.6×'],
-      ['Medium risk', '0.4× – 13×'],
-      ['High risk', '0.05× – 29×'],
+      ['1 mine', 'Low risk, small multipliers'],
+      ['3 mines', 'Moderate risk'],
+      ['5 mines', 'Higher multipliers'],
+      ['10 mines', 'High risk, big multipliers'],
+      ['24 mines', 'Extreme — 24.25× per tile'],
     ],
-    notes: 'Ball drops through 8 rows of pegs, going left or right at each. Higher risk = bigger edge multipliers but lower center payouts. All risk levels are 95% RTP.',
+    notes: '5×5 grid with hidden mines. Click tiles to reveal safe ones — each safe tile increases your multiplier. Cash out anytime to lock in your winnings, or hit a mine and lose your bet. More mines = higher multipliers but more danger.',
   },
 };
 
