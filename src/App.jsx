@@ -9,6 +9,7 @@ import SlotMachine from './components/SlotMachine';
 import Blackjack from './components/Blackjack';
 import Roulette from './components/Roulette';
 import Mines from './components/Mines';
+import GatesOfOlympus from './components/GatesOfOlympus';
 import GameInfo from './components/GameInfo';
 import TwitchEmbed from './components/TwitchEmbed';
 import Leaderboard from './components/Leaderboard';
@@ -230,6 +231,13 @@ export default function App() {
                         <GameInfo game={activeGame} />
                         {activeGame === 'slots' && (
                           <SlotMachine
+                            {...sharedGameProps}
+                            jackpot={jackpot}
+                            setJackpot={setJackpot}
+                          />
+                        )}
+                        {activeGame === 'gates' && (
+                          <GatesOfOlympus
                             {...sharedGameProps}
                             jackpot={jackpot}
                             setJackpot={setJackpot}

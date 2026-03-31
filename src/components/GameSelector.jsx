@@ -1,7 +1,8 @@
-import { Disc3, Layers, Circle, Bomb } from 'lucide-react';
+import { Disc3, Layers, Circle, Bomb, Zap } from 'lucide-react';
 
 const GAMES = [
   { id: 'slots', label: 'Slots', icon: Disc3 },
+  { id: 'gates', label: 'Gates', icon: Zap },
   { id: 'blackjack', label: 'Blackjack', icon: Layers },
   { id: 'roulette', label: 'Roulette', icon: Circle },
   { id: 'mines', label: 'Mines', icon: Bomb },

@@ -189,4 +189,33 @@ export const audio = {
       clickSynth.triggerAttackRelease('C5', '16n', now + 0.1, 0.3);
     } catch {}
   },
+
+  // Gates of Olympus: symbols popping/exploding
+  cascadePop() {
+    if (!initialized) return;
+    try {
+      const now = Tone.now();
+      clickSynth.triggerAttackRelease('A5', '64n', now, 0.3);
+      clickSynth.triggerAttackRelease('C6', '64n', now + 0.04, 0.25);
+    } catch {}
+  },
+
+  // Gates of Olympus: multiplier orb collected
+  orbCollect() {
+    if (!initialized) return;
+    try {
+      const now = Tone.now();
+      winSynth.triggerAttackRelease('E5', '16n', now, 0.3);
+      winSynth.triggerAttackRelease('A5', '16n', now + 0.06, 0.3);
+      winSynth.triggerAttackRelease('C#6', '16n', now + 0.12, 0.35);
+    } catch {}
+  },
+
+  // Gates of Olympus: new symbols landing after cascade
+  cascadeLand() {
+    if (!initialized) return;
+    try {
+      clickSynth.triggerAttackRelease('C4', '32n', Tone.now(), 0.3);
+    } catch {}
+  },
 };

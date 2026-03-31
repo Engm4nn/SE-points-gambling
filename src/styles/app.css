@@ -2538,3 +2538,292 @@ input:focus-visible {
     letter-spacing: 3px;
   }
 }
+
+/* ===== GATES OF OLYMPUS ===== */
+
+.gates-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.gates-info-bar {
+  width: 100%;
+  min-height: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.gates-freespin-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(124, 58, 237, 0.15));
+  border: 1px solid var(--discharge-glow);
+  border-radius: var(--r-md);
+  padding: var(--sp-1) var(--sp-4);
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.75rem;
+  color: var(--discharge);
+  letter-spacing: 1px;
+}
+
+.gates-fs-mult {
+  color: var(--signal-hot);
+  margin-left: var(--sp-2);
+}
+
+.gates-cascade-win {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.7rem;
+  color: var(--discharge);
+  letter-spacing: 0.5px;
+}
+
+/* 6×5 Grid */
+.gates-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  background: var(--panel);
+  border: 2px solid var(--bezel-strong);
+  border-radius: var(--r-lg);
+  padding: 4px;
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+
+.gates-column {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.gates-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--inset);
+  border-radius: var(--r-sm);
+  font-size: 1.4rem;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--t-fast) var(--ease-out),
+              border-color var(--t-fast) var(--ease-out);
+  border: 1px solid transparent;
+}
+
+.gates-cell-winning {
+  animation: gates-pulse 0.4s ease-in-out infinite alternate;
+  box-shadow: 0 0 10px var(--discharge-glow), inset 0 0 6px var(--discharge-glow);
+  border-color: var(--discharge);
+  background: rgba(251, 191, 36, 0.08);
+}
+
+.gates-cell-scatter {
+  background: rgba(251, 191, 36, 0.06);
+}
+
+@keyframes gates-pulse {
+  from { transform: scale(1); box-shadow: 0 0 8px var(--discharge-glow); }
+  to { transform: scale(1.06); box-shadow: 0 0 16px var(--discharge-glow), 0 0 24px var(--discharge-glow); }
+}
+
+.gates-symbol {
+  user-select: none;
+  line-height: 1;
+}
+
+/* Multiplier orbs */
+.gates-orb {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, var(--discharge), var(--discharge-dim));
+  box-shadow: 0 0 16px var(--discharge-glow), 0 0 32px var(--discharge-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.6rem;
+  color: var(--void);
+  z-index: 10;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+/* Win display */
+.gates-win-display {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-5);
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
+  border: 1px solid var(--discharge-glow);
+  border-radius: var(--r-lg);
+}
+
+.gates-win-amount {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.3rem;
+  color: var(--discharge);
+}
+
+.gates-win-label {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 0.75rem;
+  color: var(--ink-secondary);
+}
+
+/* Overlays (free spin intro + summary) */
+.gates-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 11, 26, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.gates-overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  text-align: center;
+  padding: var(--sp-8);
+}
+
+.gates-zeus-icon {
+  color: var(--discharge);
+  filter: drop-shadow(0 0 20px var(--discharge-glow));
+  animation: zeus-glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes zeus-glow {
+  from { filter: drop-shadow(0 0 12px var(--discharge-glow)); }
+  to { filter: drop-shadow(0 0 28px var(--discharge-glow)) drop-shadow(0 0 48px rgba(251, 191, 36, 0.2)); }
+}
+
+.gates-overlay-title {
+  font-family: 'Russo One', sans-serif;
+  font-size: 2rem;
+  color: var(--discharge);
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px var(--discharge-glow);
+}
+
+.gates-overlay-sub {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 0.9rem;
+  color: var(--ink-secondary);
+}
+
+.gates-overlay-total {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 1.1rem;
+  color: var(--ink);
+}
+
+.gates-overlay-total strong {
+  color: var(--discharge);
+  font-size: 1.5rem;
+}
+
+/* Win screen (big wins + free spin summary) */
+.gates-win-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  text-align: center;
+  padding: var(--sp-8) var(--sp-10);
+  background: linear-gradient(135deg, var(--panel), var(--raised));
+  border: 1px solid var(--discharge-glow);
+  border-radius: var(--r-xl);
+  position: relative;
+  min-width: 280px;
+  box-shadow: 0 0 40px var(--discharge-glow), 0 0 80px rgba(251, 191, 36, 0.1);
+}
+
+.gates-win-close {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  background: none;
+  border: none;
+  color: var(--ink-tertiary);
+  cursor: pointer;
+  padding: var(--sp-1);
+  border-radius: var(--r-sm);
+  transition: color var(--t-fast);
+}
+.gates-win-close:hover {
+  color: var(--ink);
+}
+
+.gates-win-badge {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 3px;
+  color: var(--discharge);
+  background: rgba(251, 191, 36, 0.1);
+  padding: var(--sp-1) var(--sp-4);
+  border-radius: var(--r-md);
+  border: 1px solid var(--discharge-glow);
+}
+
+.gates-win-amount-big {
+  font-family: 'Russo One', sans-serif;
+  font-size: 2.2rem;
+  color: var(--discharge);
+  text-shadow: 0 0 16px var(--discharge-glow);
+}
+
+.gates-win-mult {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 1rem;
+  color: var(--ink-secondary);
+}
+
+.gates-share-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-6);
+  background: var(--phosphor);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-md);
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background var(--t-fast), transform var(--t-fast);
+  margin-top: var(--sp-2);
+}
+
+.gates-share-btn:hover:not(:disabled) {
+  background: var(--phosphor-dim);
+  transform: scale(1.03);
+}
+
+.gates-share-btn:disabled {
+  cursor: default;
+}
+
+.gates-share-done {
+  background: var(--signal-go);
+}
+.gates-share-done:hover {
+  background: var(--signal-go);
+}

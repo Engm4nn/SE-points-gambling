@@ -5,7 +5,9 @@ import { BET_PRESETS, MIN_BET, BONUS_BUY_MULTIPLIER } from '../utils/constants';
 export default function BetControls({
   bet, setBet, balance, spinning, onSpin, onBonusBuy, bonusMode,
   autoSpin, onAutoSpinToggle, turbo, onTurboToggle,
+  bonusBuyMultiplier,
 }) {
+  const buyMult = bonusBuyMultiplier || BONUS_BUY_MULTIPLIER;
   const [customBet, setCustomBet] = useState('');
 
   const handleCustomBet = (e) => {
@@ -74,10 +76,10 @@ export default function BetControls({
           <button
             className="bonus-buy-btn"
             onClick={onBonusBuy}
-            disabled={spinning || balance < bet * BONUS_BUY_MULTIPLIER}
-            title={`Costs ${(bet * BONUS_BUY_MULTIPLIER).toLocaleString()} pts`}
+            disabled={spinning || balance < bet * buyMult}
+            title={`Costs ${(bet * buyMult).toLocaleString()} pts`}
           >
-            <Zap size={16} /> Bonus {BONUS_BUY_MULTIPLIER}x
+            <Zap size={16} /> Bonus {buyMult}x
           </button>
         )}
       </div>

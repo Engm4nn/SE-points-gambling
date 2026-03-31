@@ -18,6 +18,21 @@ const INFO = {
     ],
     notes: 'Jackpot grows from 1% of losses + 10 pts/min. Hit 3× 7️⃣ to win it. Bonus: triggers Vault Heist — pick from 12 vaults to add multipliers, avoid 6 traps!',
   },
+  gates: {
+    title: 'Gates of Olympus',
+    rtp: '~94.5%',
+    rows: [
+      ['👑 ×12+', '50×'],
+      ['🏆 ×12+', '40×'],
+      ['💍 ×12+', '25×'],
+      ['⏳ ×12+', '20×'],
+      ['💛 ×12+', '12×'],
+      ['🔴/💙 ×8+', '0.8×–8×'],
+      ['💜/💚 ×8+', '0.5×–5×'],
+      ['⚡ ×4+', 'Free Spins (15)'],
+    ],
+    notes: '6×5 grid, Pay Anywhere — 8+ matching symbols anywhere = win. Winning symbols vanish and new ones tumble in. Multiplier orbs (2×–100×) can appear during tumbles. In Free Spins, multipliers accumulate across all spins! Bonus Buy: 100× bet.',
+  },
   blackjack: {
     title: 'Blackjack',
     rtp: '~99.5%',
