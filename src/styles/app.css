@@ -132,7 +132,7 @@ input:focus-visible {
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: var(--sp-4);
   padding: var(--sp-3) var(--sp-6);
   background: var(--machine);
   border-bottom: 1px solid var(--bezel);
@@ -151,6 +151,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: var(--sp-4);
+  margin-left: auto;
 }
 
 .header-balance {
@@ -367,21 +368,21 @@ input:focus-visible {
   flex-shrink: 0;
 }
 
-/* Game selector within tab bar */
+/* Game selector in navbar */
 .game-selector {
   display: flex;
-  flex: 1;
+  align-items: center;
+  gap: var(--sp-1);
 }
 
 .game-selector-btn {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: var(--sp-1);
-  padding: var(--sp-2) var(--sp-3);
+  padding: var(--sp-1) var(--sp-3);
   background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
   color: var(--ink-tertiary);
   font-family: 'Chakra Petch', sans-serif;
   font-size: 0.6rem;
@@ -395,12 +396,13 @@ input:focus-visible {
 
 .game-selector-btn:hover {
   color: var(--ink-secondary);
-  background: rgba(124, 58, 237, 0.03);
+  background: rgba(124, 58, 237, 0.06);
 }
 
 .game-active {
   color: var(--phosphor);
-  border-bottom-color: var(--phosphor);
+  background: rgba(124, 58, 237, 0.1);
+  border-color: var(--phosphor-glow);
 }
 
 .game-selector-label {

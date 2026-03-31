@@ -169,6 +169,7 @@ export default function App() {
             <>
               <div className="app-header">
                 <h1 className="app-title"><Disc3 size={22} /> StreamSlots</h1>
+                <GameSelector activeGame={activeGame} onSelectGame={handleSelectGame} />
                 <div className="app-header-right">
                   <div className="deposit-wrapper">
                     <button className="deposit-btn-nav" onClick={() => setShowDeposit(prev => !prev)}>
@@ -207,10 +208,14 @@ export default function App() {
                 </div>
 
                 <div className="layout-right">
-                  {/* Game selector + tabs */}
+                  {/* History / Leaderboard tabs */}
                   <div className="tab-bar">
-                    <GameSelector activeGame={activeGame} onSelectGame={handleSelectGame} />
-                    <div className="tab-divider" />
+                    <button
+                      className={`tab-btn ${tab === 'game' ? 'tab-active' : ''}`}
+                      onClick={() => setTab('game')}
+                    >
+                      Game
+                    </button>
                     <button
                       className={`tab-btn ${tab === 'history' ? 'tab-active' : ''}`}
                       onClick={() => setTab('history')}
