@@ -23,13 +23,13 @@ export const SCATTER = { id: 'scatter', emoji: '⚡', weight: 3 };
 
 // Pay table: [8+, 9+, 10+, 11+, 12+] multipliers of total bet — tuned for ~95% RTP
 const PAY_TABLE = {
-  0: [0.4, 0.8, 1.5, 3, 4.5],     // purple/green
-  1: [0.6, 1.2, 2, 4.5, 7],       // red/blue
+  0: [0.4, 0.8, 1.5, 3, 5],       // purple/green
+  1: [0.6, 1.2, 2.2, 4.5, 7],     // red/blue
   2: [0.7, 1.5, 3, 7, 12],        // yellow
-  3: [1, 2, 4.5, 9, 16],          // hourglass
+  3: [1, 2.2, 4.5, 9, 16],        // hourglass
   4: [1.5, 3, 7, 14, 25],         // ring
-  5: [2, 4.5, 10, 20, 35],        // chalice
-  6: [4, 7, 14, 28, 50],          // crown
+  5: [2.2, 4.5, 10, 20, 35],      // chalice
+  6: [4.5, 7.5, 15, 30, 50],      // crown
 };
 
 // Scatter payouts (× bet): 4=1x, 5=2x, 6=25x
