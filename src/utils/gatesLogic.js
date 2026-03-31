@@ -2,7 +2,7 @@
 
 export const GRID_COLS = 6;
 export const GRID_ROWS = 5;
-export const FREE_SPINS_COUNT = 15;
+export const FREE_SPINS_COUNT = 12;
 export const FREE_SPINS_RETRIGGER = 5;
 export const GATES_BONUS_BUY = 100;
 
@@ -21,33 +21,29 @@ export const GATES_SYMBOLS = [
 
 export const SCATTER = { id: 'scatter', emoji: '⚡', weight: 3 };
 
-// Pay table: [8+, 9+, 10+, 11+, 12+] multipliers of total bet
+// Pay table: [8+, 9+, 10+, 11+, 12+] multipliers of total bet — tuned for ~95% RTP
 const PAY_TABLE = {
-  0: [0.5, 1, 2, 3, 5],       // purple/green
-  1: [0.8, 1.5, 3, 5, 8],     // red/blue
-  2: [1, 2, 4, 8, 12],        // yellow
-  3: [1.5, 3, 6, 12, 20],     // hourglass
-  4: [2, 4, 8, 15, 25],       // ring
-  5: [3, 5, 10, 20, 40],      // chalice
-  6: [5, 8, 15, 30, 50],      // crown
+  0: [0.4, 0.8, 1.5, 3, 4.5],     // purple/green
+  1: [0.6, 1.2, 2, 4.5, 7],       // red/blue
+  2: [0.7, 1.5, 3, 7, 12],        // yellow
+  3: [1, 2, 4.5, 9, 16],          // hourglass
+  4: [1.5, 3, 7, 14, 25],         // ring
+  5: [2, 4.5, 10, 20, 35],        // chalice
+  6: [4, 7, 14, 28, 50],          // crown
 };
 
-// Scatter payouts (× bet): 4=3x, 5=5x, 6=100x
-const SCATTER_PAY = { 4: 3, 5: 5, 6: 100 };
+// Scatter payouts (× bet): 4=1x, 5=2x, 6=25x
+const SCATTER_PAY = { 4: 1, 5: 2, 6: 25 };
 
-// Multiplier orb weights
+// Multiplier orb weights — tuned for ~95% RTP
 const ORB_VALUES = [
-  { value: 2,   weight: 30 },
+  { value: 2,   weight: 50 },
   { value: 3,   weight: 25 },
-  { value: 5,   weight: 20 },
-  { value: 8,   weight: 10 },
-  { value: 10,  weight: 8 },
-  { value: 25,  weight: 4 },
-  { value: 50,  weight: 2 },
-  { value: 100, weight: 1 },
+  { value: 5,   weight: 10 },
+  { value: 10,  weight: 3 },
 ];
 
-const ORB_CHANCE = 0.15; // per tumble
+const ORB_CHANCE = 0.03; // 3% per tumble
 
 // Unique ID counter for AnimatePresence keys
 let nextId = 1;
@@ -181,29 +177,24 @@ export function cascadeGrid(grid, winPositions) {
   return newGrid;
 }
 
-// Generate multiplier orbs for a tumble
+// Generate multiplier orb for a tumble — single orb only
 export function generateOrbs() {
   if (Math.random() > ORB_CHANCE) return [];
 
-  const count = Math.random() < 0.7 ? 1 : Math.random() < 0.8 ? 2 : 3;
-  const orbs = [];
   const totalWeight = ORB_VALUES.reduce((s, o) => s + o.weight, 0);
-
-  for (let i = 0; i < count; i++) {
-    let r = Math.random() * totalWeight;
-    let value = 2;
-    for (const ov of ORB_VALUES) {
-      r -= ov.weight;
-      if (r <= 0) { value = ov.value; break; }
-    }
-    orbs.push({
-      id: uid(),
-      value,
-      col: Math.floor(Math.random() * GRID_COLS),
-      row: Math.floor(Math.random() * GRID_ROWS),
-    });
+  let r = Math.random() * totalWeight;
+  let value = 2;
+  for (const ov of ORB_VALUES) {
+    r -= ov.weight;
+    if (r <= 0) { value = ov.value; break; }
   }
-  return orbs;
+
+  return [{
+    id: uid(),
+    value,
+    col: Math.floor(Math.random() * GRID_COLS),
+    row: Math.floor(Math.random() * GRID_ROWS),
+  }];
 }
 
 // Get scatter payout multiplier

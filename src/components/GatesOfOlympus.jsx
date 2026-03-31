@@ -119,17 +119,16 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
 
     if (phase === 'popping') {
       const timer = setTimeout(() => {
-        // After pop, load the next step's grid (cascade result)
-        const nextIdx = stepIdxRef.current + 1;
-        const steps = stepsRef.current;
-
-        // Figure out which cells are new (cascaded in)
-        const currentGrid = stepsRef.current[stepIdxRef.current]?.grid;
+        // After pop: swap to cascaded grid with new symbols dropping in
         const currentWinPos = stepsRef.current[stepIdxRef.current]?.winPositions;
+        const nextIdx = stepIdxRef.current + 1;
+        const nextGrid = nextIdx < stepsRef.current.length
+          ? stepsRef.current[nextIdx].grid
+          : finalGridRef.current;
+
+        // Mark new cells (top N rows of each column where wins were removed)
+        const incoming = new Set();
         if (currentWinPos) {
-          // New cells are positions that had winning symbols (now replaced)
-          // In the next grid, the top N rows of each column are new
-          const incoming = new Set();
           for (let c = 0; c < GRID_COLS; c++) {
             let count = 0;
             for (let r = 0; r < GRID_ROWS; r++) {
@@ -139,9 +138,11 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
               incoming.add(`${c}-${r}`);
             }
           }
-          setNewCells(incoming);
         }
 
+        // Load the new grid, clear win highlights, show drop animation
+        setGrid(nextGrid);
+        setNewCells(incoming);
         setActiveOrbs([]);
         setWinPositions(new Set());
         setPhase('cascading');
@@ -151,6 +152,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
 
     if (phase === 'cascading') {
       const timer = setTimeout(() => {
+        setNewCells(new Set());
         stepIdxRef.current++;
         try { audio.cascadeLand(); } catch {}
         processStep();

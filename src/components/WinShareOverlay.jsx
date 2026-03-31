@@ -8,9 +8,10 @@ export default function WinShareOverlay({ amount, multiplier, username, game, on
 
   const winType = multiplier >= 25 ? 'mega' : multiplier >= 10 ? 'big' : 'win';
   const badge = multiplier >= 25 ? 'MEGA WIN' : multiplier >= 10 ? 'BIG WIN' : 'NICE WIN';
+  const canShare = multiplier >= 25 && amount > 0;
 
   const handleShare = () => {
-    if (shared) return;
+    if (shared || !canShare) return;
     const siteUrl = window.location.origin;
     const msg = formatWinMessage(username, amount, multiplier, winType, siteUrl);
     sendChatMessage(msg);
@@ -48,14 +49,16 @@ export default function WinShareOverlay({ amount, multiplier, username, game, on
 
         {game && <div className="win-share-game">{game}</div>}
 
-        <button
-          className={`win-share-btn ${shared ? 'win-share-done' : ''}`}
-          onClick={handleShare}
-          disabled={shared}
-        >
-          <MessageSquare size={16} />
-          {shared ? 'Shared!' : 'Share in Chat'}
-        </button>
+        {canShare && (
+          <button
+            className={`win-share-btn ${shared ? 'win-share-done' : ''}`}
+            onClick={handleShare}
+            disabled={shared}
+          >
+            <MessageSquare size={16} />
+            {shared ? 'Shared!' : 'Share in Chat'}
+          </button>
+        )}
       </motion.div>
     </motion.div>
   );
