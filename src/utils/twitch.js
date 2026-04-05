@@ -1,10 +1,19 @@
-const TWITCH_CLIENT_ID = 'rfht3kdwifzsiw4baj1j7fairifr6f';
-const REDIRECT_URI = `${window.location.origin}/auth/callback`;
+const DEFAULT_TWITCH_CLIENT_ID = 'rfht3kdwifzsiw4baj1j7fairifr6f';
+
+const TWITCH_CLIENT_ID =
+  import.meta.env.VITE_TWITCH_CLIENT_ID || DEFAULT_TWITCH_CLIENT_ID;
+
+function getRedirectUri() {
+  return (
+    import.meta.env.VITE_TWITCH_REDIRECT_URI ||
+    `${window.location.origin}/auth/callback`
+  );
+}
 
 export function getTwitchLoginUrl() {
   const params = new URLSearchParams({
     client_id: TWITCH_CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
+    redirect_uri: getRedirectUri(),
     response_type: 'token',
     scope: '',
   });
