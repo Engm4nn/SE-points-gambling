@@ -319,9 +319,9 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
       <AnimatePresence>
         {bonusStage === 'picker' && <BonusPicker onResult={handlePickerResult} />}
         {bonusStage === 'wheel' && <BonusWheel onResult={handleWheelResult} />}
-        {bonusStage === 'vault' && <VaultHeist bet={bonusBet} onComplete={(mult) => handleBonusGameComplete(mult, 'Vault Heist', '🔓')} />}
-        {bonusStage === 'golden' && <GoldenRain bet={bonusBet} onComplete={(mult) => handleBonusGameComplete(mult, 'Golden Rain', '✨')} />}
-        {bonusStage === 'scratch' && <ScratchCard bet={bonusBet} onComplete={(mult) => handleBonusGameComplete(mult, 'Scratch Card', '🎟️')} />}
+        {bonusStage === 'vault' && <VaultHeist bet={baseBetRef.current} onComplete={(mult) => handleBonusGameComplete(mult, 'Vault Heist', '🔓')} />}
+        {bonusStage === 'golden' && <GoldenRain bet={baseBetRef.current} onComplete={(mult) => handleBonusGameComplete(mult, 'Golden Rain', '✨')} />}
+        {bonusStage === 'scratch' && <ScratchCard bet={baseBetRef.current} onComplete={(mult) => handleBonusGameComplete(mult, 'Scratch Card', '🎟️')} />}
       </AnimatePresence>
 
       {/* Win share overlay */}
