@@ -58,6 +58,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
   const finalGridRef = useRef(null);
   const totalScattersRef = useRef(0);
   const spinBetRef = useRef(0);
+  const baseBetRef = useRef(0);
   const precomputedBaseWinRef = useRef(0);
   const precomputedOrbsRef = useRef(0);
   const autoSpinRef = useRef(false);
@@ -163,6 +164,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
 
     if (phase === 'settling') {
       const betAmt = spinBetRef.current;
+      const baseBet = baseBetRef.current;
       let totalWin = precomputedBaseWinRef.current;
       const orbTotal = precomputedOrbsRef.current;
 
@@ -173,15 +175,15 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
 
       const scatPay = getScatterPay(totalScattersRef.current);
       if (scatPay > 0) {
-        totalWin += Math.floor(scatPay * betAmt);
+        totalWin += Math.floor(scatPay * baseBet);
       }
 
-      const mult = betAmt > 0 ? totalWin / betAmt : 0;
+      const mult = baseBet > 0 ? totalWin / baseBet : 0;
       if (totalWin > 0) {
         setBalance(prev => prev + totalWin);
         addPoints(username, totalWin, 'gates', betIdRef.current).catch(() => {});
         if (isFreeSpinMode) freeSpinTotalWinRef.current += totalWin;
-        const winType = totalWin >= betAmt * 25 ? 'mega' : totalWin >= betAmt * 10 ? 'big' : 'win';
+        const winType = totalWin >= baseBet * 25 ? 'mega' : totalWin >= baseBet * 10 ? 'big' : 'win';
         addHistory([{ emoji: `⚡ Gates ${Math.floor(mult)}x` }], totalWin - (isFreeSpinMode ? 0 : betAmt), winType, 'gates');
         // Big wins (5x+) get share overlay, but not during free spins (wait for summary)
         if (!isFreeSpinMode && mult >= 5) {
@@ -191,7 +193,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
       } else {
         setShowWin(null);
         if (!isFreeSpinMode) {
-          const contribution = Math.max(1, Math.floor(betAmt * JACKPOT_CONTRIBUTION_RATE));
+          const contribution = Math.max(1, Math.floor(baseBet * JACKPOT_CONTRIBUTION_RATE));
           contributeToJackpot(contribution).then(newJp => { if (newJp) setJackpot(newJp); });
         }
         addHistory([{ emoji: '⚡ Gates 0x' }], isFreeSpinMode ? 0 : -betAmt, 'loss', 'gates');
@@ -213,8 +215,8 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
               const totalFsWin = freeSpinTotalWinRef.current;
               setIsFreeSpinMode(false);
               setFreeSpinMultiplier(0);
-              const fsMult = betAmt > 0 ? totalFsWin / betAmt : 0;
-              setFreeSpinSummary({ totalWin: totalFsWin, bet: betAmt });
+              const fsMult = baseBet > 0 ? totalFsWin / baseBet : 0;
+              setFreeSpinSummary({ totalWin: totalFsWin, bet: baseBet });
               if (totalFsWin > 0) setShareWin({ amount: totalFsWin, multiplier: fsMult });
               reportSpin(username, betAmt, totalFsWin);
             }
@@ -288,6 +290,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
     setScatterPositions(new Set());
     setScatterCount(0);
     spinBetRef.current = actualBet;
+    baseBetRef.current = bet;
 
     const newGrid = isBonusBuy ? generateBonusBuyGrid() : generateGrid();
 
