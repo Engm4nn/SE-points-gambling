@@ -68,6 +68,15 @@ const INFO = {
     ],
     notes: '5×5 grid with hidden mines. Click tiles to reveal safe ones — each safe tile increases your multiplier. Cash out anytime to lock in your winnings, or hit a mine and lose your bet. More mines = higher multipliers but more danger.',
   },
+  coinflip: {
+    title: 'Coin Flip',
+    rtp: '100%',
+    rows: [
+      ['Win (correct call)', '2×'],
+      ['Lose (wrong call)', '0×'],
+    ],
+    notes: 'Pick Heads or Tails, place your bet, and flip the coin. 50/50 chance — correct call pays 2× your bet. Max bet: 10,000 pts.',
+  },
 };
 
 export default function GameInfo({ game }) {

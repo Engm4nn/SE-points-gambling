@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NUMBERS, spinWheel, evaluateBets, getNumberColor } from '../utils/rouletteLogic';
-import { deductPoints, addPoints } from '../utils/api';
+import { deductPoints, addPoints, fetchPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
 import { audio } from '../utils/audio';
 
@@ -61,9 +61,17 @@ export default function Roulette({ balance, setBalance, username, showToast, add
 
   const handleSpin = useCallback(async () => {
     if (phase !== 'betting' || bets.length === 0) return;
-    if (totalBet > balance) {
-      showToast('Not enough points!', 'error');
-      return;
+    {
+      let currentBalance = balance;
+      try {
+        const fresh = await fetchPoints(username);
+        setBalance(fresh);
+        currentBalance = fresh;
+      } catch {}
+      if (totalBet > currentBalance) {
+        showToast('Not enough points!', 'error');
+        return;
+      }
     }
     await audio.ensure();
 

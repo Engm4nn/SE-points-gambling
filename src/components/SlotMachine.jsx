@@ -10,7 +10,7 @@ import GoldenRain from './GoldenRain';
 import ScratchCard from './ScratchCard';
 import { REEL_COUNT, SPIN_DURATION_BASE, SPIN_STAGGER, BONUS_BUY_MULTIPLIER, JACKPOT_CONTRIBUTION_RATE } from '../utils/constants';
 import { spinReels, evaluateWin, isBonusTriggered, isNearMiss } from '../utils/slotLogic';
-import { deductPoints, addPoints } from '../utils/api';
+import { deductPoints, addPoints, fetchPoints } from '../utils/api';
 import { audio } from '../utils/audio';
 import { sendChatMessage, formatWinMessage, shouldAnnounce } from '../utils/chatBot';
 import { reportSpin } from '../utils/leaderboardApi';
@@ -58,10 +58,18 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
     const actualBet = inFreeSpins ? 0 : (isBonusBuy ? bet * BONUS_BUY_MULTIPLIER : bet);
 
-    if (!inFreeSpins && balance < actualBet) {
-      showToast('Not enough points!', 'error');
-      setAutoSpin(false);
-      return;
+    if (!inFreeSpins) {
+      let currentBalance = balance;
+      try {
+        const fresh = await fetchPoints(username);
+        setBalance(fresh);
+        currentBalance = fresh;
+      } catch {}
+      if (currentBalance < actualBet) {
+        showToast('Not enough points!', 'error');
+        setAutoSpin(false);
+        return;
+      }
     }
 
     if (actualBet > 0) {

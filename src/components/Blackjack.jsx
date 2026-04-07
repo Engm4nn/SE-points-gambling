@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createDeck, handValue, isBlackjack, dealerShouldHit } from '../utils/blackjackLogic';
-import { deductPoints, addPoints } from '../utils/api';
+import { deductPoints, addPoints, fetchPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
 import { BET_PRESETS, MIN_BET } from '../utils/constants';
 import { audio } from '../utils/audio';
@@ -67,7 +67,15 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
   const handleDeal = useCallback(async () => {
     if (busy) return;
     if (bet < MIN_BET) { showToast('Minimum bet is ' + MIN_BET, 'error'); return; }
-    if (balance < bet) { showToast('Not enough points!', 'error'); return; }
+    {
+      let currentBalance = balance;
+      try {
+        const fresh = await fetchPoints(username);
+        setBalance(fresh);
+        currentBalance = fresh;
+      } catch {}
+      if (currentBalance < bet) { showToast('Not enough points!', 'error'); return; }
+    }
 
     setBusy(true);
     setBalance((prev) => prev - bet);
@@ -165,7 +173,15 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
   const handleDouble = useCallback(async () => {
     if (busy || phase !== PHASE.PLAYING) return;
     if (playerCards.length !== 2) return;
-    if (balance < bet) { showToast('Not enough points to double!', 'error'); return; }
+    {
+      let currentBalance = balance;
+      try {
+        const fresh = await fetchPoints(username);
+        setBalance(fresh);
+        currentBalance = fresh;
+      } catch {}
+      if (currentBalance < bet) { showToast('Not enough points to double!', 'error'); return; }
+    }
 
     setBusy(true);
     setBalance((prev) => prev - bet);

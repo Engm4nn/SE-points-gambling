@@ -9,6 +9,7 @@ import SlotMachine from './components/SlotMachine';
 import Blackjack from './components/Blackjack';
 import Roulette from './components/Roulette';
 import Mines from './components/Mines';
+import CoinFlip from './components/CoinFlip';
 import GatesOfOlympus from './components/GatesOfOlympus';
 import GameInfo from './components/GameInfo';
 import TwitchEmbed from './components/TwitchEmbed';
@@ -260,6 +261,7 @@ export default function App() {
                         {activeGame === 'blackjack' && <Blackjack {...sharedGameProps} />}
                         {activeGame === 'roulette' && <Roulette {...sharedGameProps} />}
                         {activeGame === 'mines' && <Mines {...sharedGameProps} />}
+                        {activeGame === 'coinflip' && <CoinFlip {...sharedGameProps} />}
                       </div>
                     )}
                     {tab === 'history' && (

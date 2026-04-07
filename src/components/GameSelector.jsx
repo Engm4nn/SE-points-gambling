@@ -1,4 +1,4 @@
-import { Disc3, Layers, Circle, Bomb, Zap } from 'lucide-react';
+import { Disc3, Layers, Circle, Bomb, Zap, CircleDot } from 'lucide-react';
 
 const GAMES = [
   { id: 'slots', label: 'Slots', icon: Disc3 },
@@ -6,6 +6,7 @@ const GAMES = [
   { id: 'blackjack', label: 'Blackjack', icon: Layers },
   { id: 'roulette', label: 'Roulette', icon: Circle },
   { id: 'mines', label: 'Mines', icon: Bomb },
+  { id: 'coinflip', label: 'Coin Flip', icon: CircleDot },
 ];
 
 export default function GameSelector({ activeGame, onSelectGame }) {

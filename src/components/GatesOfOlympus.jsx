@@ -6,7 +6,7 @@ import {
   GATES_BONUS_BUY, generateGrid, generateBonusBuyGrid,
   simulateFullSpin, getScatterPay,
 } from '../utils/gatesLogic';
-import { deductPoints, addPoints } from '../utils/api';
+import { deductPoints, addPoints, fetchPoints } from '../utils/api';
 import { audio } from '../utils/audio';
 import { reportSpin } from '../utils/leaderboardApi';
 import { contributeToJackpot } from '../utils/jackpotApi';
@@ -251,10 +251,18 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
 
     const actualBet = isFreeSpinMode ? 0 : (isBonusBuy ? bet * GATES_BONUS_BUY : bet);
 
-    if (!isFreeSpinMode && balance < actualBet) {
-      showToast('Not enough points!', 'error');
-      setAutoSpin(false);
-      return;
+    if (!isFreeSpinMode) {
+      let currentBalance = balance;
+      try {
+        const fresh = await fetchPoints(username);
+        setBalance(fresh);
+        currentBalance = fresh;
+      } catch {}
+      if (currentBalance < actualBet) {
+        showToast('Not enough points!', 'error');
+        setAutoSpin(false);
+        return;
+      }
     }
 
     if (actualBet > 0) {

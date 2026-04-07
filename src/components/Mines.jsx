@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deductPoints, addPoints } from '../utils/api';
+import { deductPoints, addPoints, fetchPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
 import { generateMines, getMultiplier, getNextMultiplier, getSafeChance, MINE_PRESETS, GRID_SIZE } from '../utils/minesLogic';
 import { MIN_BET, BET_PRESETS } from '../utils/constants';
@@ -23,7 +23,16 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
   const betRef = useRef(10);
 
   const handleStart = useCallback(async () => {
-    if (balance < bet || bet < MIN_BET) return;
+    if (bet < MIN_BET) return;
+    {
+      let currentBalance = balance;
+      try {
+        const fresh = await fetchPoints(username);
+        setBalance(fresh);
+        currentBalance = fresh;
+      } catch {}
+      if (currentBalance < bet) return;
+    }
     await audio.ensure();
 
     betRef.current = bet;
