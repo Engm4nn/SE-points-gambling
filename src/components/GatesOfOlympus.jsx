@@ -6,7 +6,7 @@ import {
   GATES_BONUS_BUY, generateGrid, generateBonusBuyGrid,
   simulateFullSpin, getScatterPay,
 } from '../utils/gatesLogic';
-import { deductPoints, addPoints, fetchPoints } from '../utils/api';
+import { deductBet, settleBet, fetchPoints } from '../utils/api';
 import { audio } from '../utils/audio';
 import { reportSpin } from '../utils/leaderboardApi';
 import { contributeToJackpot } from '../utils/jackpotApi';
@@ -181,7 +181,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
       const mult = baseBet > 0 ? totalWin / baseBet : 0;
       if (totalWin > 0) {
         setBalance(prev => prev + totalWin);
-        addPoints(username, totalWin, 'gates', betIdRef.current).catch(() => {});
+        settleBet(betIdRef.current, totalWin).catch(() => {});
         if (isFreeSpinMode) freeSpinTotalWinRef.current += totalWin;
         const winType = totalWin >= baseBet * 25 ? 'mega' : totalWin >= baseBet * 10 ? 'big' : 'win';
         addHistory([{ emoji: `⚡ Gates ${Math.floor(mult)}x` }], totalWin - (isFreeSpinMode ? 0 : betAmt), winType, 'gates');
@@ -257,7 +257,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
     if (!isFreeSpinMode) {
       let currentBalance = balance;
       try {
-        const fresh = await fetchPoints(username);
+        const fresh = await fetchPoints();
         setBalance(fresh);
         currentBalance = fresh;
       } catch {}
@@ -271,7 +271,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
     if (actualBet > 0) {
       setBalance(prev => prev - actualBet);
       try {
-        const deductResult = await deductPoints(username, actualBet, 'gates');
+        const deductResult = await deductBet('gates', actualBet);
         betIdRef.current = deductResult.betId;
       } catch {
         setBalance(prev => prev + actualBet);
@@ -364,7 +364,7 @@ export default function GatesOfOlympus({ balance, setBalance, username, showToas
         }
       }, t('initialDrop', turbo));
     }
-  }, [busy, freeSpinIntro, freeSpinSummary, isFreeSpinMode, bet, balance, username, showToast, setBalance, turbo, processStep]);
+  }, [busy, freeSpinIntro, freeSpinSummary, isFreeSpinMode, bet, balance, showToast, setBalance, turbo, processStep]);
 
   const handleBonusBuy = useCallback(() => { handleSpin(true); }, [handleSpin]);
 

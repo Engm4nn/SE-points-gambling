@@ -1,11 +1,11 @@
 import { getDb, ensureTables } from './db.js';
+import { requireAuth } from './session.js';
 
 const JACKPOT_SEED = 5000;
 const GROWTH_PER_MINUTE = 10;
 
 async function ensureJackpotTable() {
   const db = getDb();
-  // Use literal SQL for DDL — no parameterized values in DEFAULT
   await db`
     CREATE TABLE IF NOT EXISTS jackpot (
       id INT PRIMARY KEY DEFAULT 1,
@@ -14,7 +14,6 @@ async function ensureJackpotTable() {
       last_growth_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
-  // Seed row if empty
   const rows = await db`SELECT id FROM jackpot WHERE id = 1`;
   if (rows.length === 0) {
     await db`INSERT INTO jackpot (id, amount) VALUES (1, 5000)`;
@@ -57,6 +56,9 @@ export default async function handler(req, res) {
       });
 
     } else if (req.method === 'POST') {
+      const session = await requireAuth(req);
+      if (!session) return res.status(401).json({ error: 'Not authenticated' });
+
       const { action, amount } = req.body || {};
 
       if (action === 'contribute' && typeof amount === 'number' && amount > 0) {

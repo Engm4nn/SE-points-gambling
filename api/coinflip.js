@@ -1,5 +1,6 @@
 import { getDb, ensureTables } from './db.js';
-import { getChannelId, seDeductPoints, seAddPoints, seGetPoints, sanitize } from './se.js';
+import { getChannelId, seDeductPoints, seAddPoints, seGetPoints } from './se.js';
+import { requireAuth } from './session.js';
 
 const MAX_BET = 10000;
 const MIN_BET = 10;
@@ -13,6 +14,10 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
+    const session = await requireAuth(req);
+    if (!session) return res.status(401).json({ error: 'Not authenticated' });
+
+    const user = session.username;
     await ensureTables();
     const db = getDb();
     const { channelId, jwt } = await getChannelId();
@@ -21,14 +26,13 @@ export default async function handler(req, res) {
     const { action } = body;
 
     if (action === 'flip') {
-      const { username, amount: rawAmount, choice } = body;
-      if (!username || !choice) return res.status(400).json({ error: 'Missing fields' });
+      const { amount: rawAmount, choice } = body;
+      if (!choice) return res.status(400).json({ error: 'Missing choice' });
       if (!['heads', 'tails'].includes(choice)) return res.status(400).json({ error: 'Invalid choice' });
 
       const amount = Math.floor(Number(rawAmount));
       if (amount < MIN_BET || amount > MAX_BET) return res.status(400).json({ error: `Bet must be ${MIN_BET}–${MAX_BET.toLocaleString()}` });
 
-      const user = sanitize(username);
       const balance = await seGetPoints(channelId, jwt, user);
       if (balance < amount) return res.status(400).json({ error: 'Not enough points' });
 
@@ -50,10 +54,9 @@ export default async function handler(req, res) {
       return res.json({ betId: null, result, won: false, pot: 0 });
 
     } else if (action === 'double') {
-      const { betId, username } = body;
-      if (!betId || !username) return res.status(400).json({ error: 'Missing fields' });
+      const { betId } = body;
+      if (!betId) return res.status(400).json({ error: 'Missing betId' });
 
-      const user = sanitize(username);
       const rows = await db`
         SELECT id, username, bet_amount, pot, choice, streak, status, created_at
         FROM coinflip_bets WHERE id = ${betId}
@@ -85,10 +88,9 @@ export default async function handler(req, res) {
       return res.json({ betId, result, won: false, pot: 0, streak: bet.streak });
 
     } else if (action === 'cashout') {
-      const { betId, username } = body;
-      if (!betId || !username) return res.status(400).json({ error: 'Missing fields' });
+      const { betId } = body;
+      if (!betId) return res.status(400).json({ error: 'Missing betId' });
 
-      const user = sanitize(username);
       const rows = await db`
         SELECT id, username, pot, status FROM coinflip_bets WHERE id = ${betId}
       `;

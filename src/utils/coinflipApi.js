@@ -1,8 +1,10 @@
-export async function coinflipStart(username, amount, choice) {
+import { authHeaders } from './api';
+
+export async function coinflipStart(amount, choice) {
   const res = await fetch('/api/coinflip', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'flip', username, amount, choice }),
+    headers: authHeaders(),
+    body: JSON.stringify({ action: 'flip', amount, choice }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Request failed' }));
@@ -11,11 +13,11 @@ export async function coinflipStart(username, amount, choice) {
   return res.json();
 }
 
-export async function coinflipDouble(betId, username) {
+export async function coinflipDouble(betId) {
   const res = await fetch('/api/coinflip', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'double', betId, username }),
+    headers: authHeaders(),
+    body: JSON.stringify({ action: 'double', betId }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Request failed' }));
@@ -24,11 +26,11 @@ export async function coinflipDouble(betId, username) {
   return res.json();
 }
 
-export async function coinflipCashout(betId, username) {
+export async function coinflipCashout(betId) {
   const res = await fetch('/api/coinflip', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'cashout', betId, username }),
+    headers: authHeaders(),
+    body: JSON.stringify({ action: 'cashout', betId }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: 'Request failed' }));

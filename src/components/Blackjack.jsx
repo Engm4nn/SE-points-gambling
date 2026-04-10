@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createDeck, handValue, isBlackjack, dealerShouldHit } from '../utils/blackjackLogic';
-import { deductPoints, addPoints, fetchPoints } from '../utils/api';
+import { deductBet, settleBet, fetchPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
 import { BET_PRESETS, MIN_BET } from '../utils/constants';
 import { audio } from '../utils/audio';
@@ -72,7 +72,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     {
       let currentBalance = balance;
       try {
-        const fresh = await fetchPoints(username);
+        const fresh = await fetchPoints();
         setBalance(fresh);
         currentBalance = fresh;
       } catch {}
@@ -83,7 +83,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     setBalance((prev) => prev - bet);
 
     try {
-      const deductResult = await deductPoints(username, bet, 'blackjack');
+      const deductResult = await deductBet('blackjack', bet);
       betIdRef.current = deductResult.betId;
       doubleBetIdRef.current = null;
     } catch {
@@ -180,7 +180,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     {
       let currentBalance = balance;
       try {
-        const fresh = await fetchPoints(username);
+        const fresh = await fetchPoints();
         setBalance(fresh);
         currentBalance = fresh;
       } catch {}
@@ -191,7 +191,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     setBalance((prev) => prev - bet);
 
     try {
-      const deductResult = await deductPoints(username, bet, 'blackjack');
+      const deductResult = await deductBet('blackjack', bet);
       doubleBetIdRef.current = deductResult.betId;
     } catch {
       setBalance((prev) => prev + bet);
@@ -285,7 +285,7 @@ export default function Blackjack({ balance, setBalance, username, showToast, ad
     // Add winnings
     if (payout > 0) {
       try {
-        await addPoints(username, payout, 'blackjack', betIdRef.current);
+        await settleBet(betIdRef.current, payout);
         setBalance((prev) => prev + payout);
       } catch {
         showToast('Failed to add winnings', 'error');

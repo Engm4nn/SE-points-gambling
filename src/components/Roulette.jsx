@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NUMBERS, spinWheel, evaluateBets, getNumberColor } from '../utils/rouletteLogic';
-import { deductPoints, addPoints, fetchPoints } from '../utils/api';
+import { deductBet, settleBet, fetchPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
 import { audio } from '../utils/audio';
 
@@ -65,7 +65,7 @@ export default function Roulette({ balance, setBalance, username, showToast, add
     {
       let currentBalance = balance;
       try {
-        const fresh = await fetchPoints(username);
+        const fresh = await fetchPoints();
         setBalance(fresh);
         currentBalance = fresh;
       } catch {}
@@ -80,7 +80,7 @@ export default function Roulette({ balance, setBalance, username, showToast, add
     setPhase('spinning');
 
     try {
-      const deductResult = await deductPoints(username, totalBet, 'roulette');
+      const deductResult = await deductBet('roulette', totalBet);
       betIdRef.current = deductResult.betId;
     } catch {
       setBalance(prev => prev + totalBet);
@@ -113,7 +113,7 @@ export default function Roulette({ balance, setBalance, username, showToast, add
           if (totalPayout > 0) {
             setBalance(prev => prev + totalPayout);
             audio.win(totalPayout / totalBet);
-            try { await addPoints(username, totalPayout, 'roulette', betIdRef.current); } catch {}
+            try { await settleBet(betIdRef.current, totalPayout); } catch {}
           } else {
             audio.loss();
           }
@@ -132,9 +132,8 @@ export default function Roulette({ balance, setBalance, username, showToast, add
           setPhase('result');
         }, 800);
       }
-    }, tick < 15 ? 60 : 60 + (tick - 15) * 30); // speeds up then slows down
+    }, tick < 15 ? 60 : 60 + (tick - 15) * 30);
 
-    // Fallback: use fixed timing with setTimeout chain
     clearInterval(spinIntervalRef.current);
     let delay = 0;
     for (let i = 0; i < totalTicks; i++) {
@@ -153,7 +152,7 @@ export default function Roulette({ balance, setBalance, username, showToast, add
             if (totalPayout > 0) {
               setBalance(prev => prev + totalPayout);
               audio.win(totalPayout / totalBet);
-              try { await addPoints(username, totalPayout, 'roulette', betIdRef.current); } catch {}
+              try { await settleBet(betIdRef.current, totalPayout); } catch {}
             } else {
               audio.loss();
             }

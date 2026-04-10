@@ -1,4 +1,5 @@
 import { getDb, ensureTables } from './db.js';
+import { requireAuth } from './session.js';
 
 export default async function handler(req, res) {
   try {
@@ -10,7 +11,6 @@ export default async function handler(req, res) {
       const maxResults = Math.min(parseInt(limit) || 10, 100);
 
       if (type === 'all') {
-        // Full leaderboard page — all users sorted by total wagered
         const rows = await db`
           SELECT username, total_wagered, total_won, total_spins, last_active
           FROM wagers
@@ -20,7 +20,6 @@ export default async function handler(req, res) {
         return res.json({ leaderboard: rows });
       }
 
-      // Default: top 3 by total wagered
       const rows = await db`
         SELECT username, total_wagered, total_won, total_spins
         FROM wagers
@@ -30,13 +29,15 @@ export default async function handler(req, res) {
       return res.json({ leaderboard: rows });
 
     } else if (req.method === 'POST') {
-      // Record a spin: { username, wagered, won }
-      const { username, wagered, won } = req.body || {};
-      if (!username || typeof wagered !== 'number') {
-        return res.status(400).json({ error: 'Missing username or wagered' });
+      const session = await requireAuth(req);
+      if (!session) return res.status(401).json({ error: 'Not authenticated' });
+
+      const { wagered, won } = req.body || {};
+      if (typeof wagered !== 'number') {
+        return res.status(400).json({ error: 'Missing wagered' });
       }
 
-      const sanitized = username.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const sanitized = session.username;
       const wonAmount = typeof won === 'number' ? won : 0;
 
       await db`

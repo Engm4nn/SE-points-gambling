@@ -10,9 +10,9 @@ import GoldenRain from './GoldenRain';
 import ScratchCard from './ScratchCard';
 import { REEL_COUNT, SPIN_DURATION_BASE, SPIN_STAGGER, BONUS_BUY_MULTIPLIER, JACKPOT_CONTRIBUTION_RATE } from '../utils/constants';
 import { spinReels, evaluateWin, isBonusTriggered, isNearMiss } from '../utils/slotLogic';
-import { deductPoints, addPoints, fetchPoints } from '../utils/api';
+import { deductBet, settleBet, fetchPoints } from '../utils/api';
 import { audio } from '../utils/audio';
-import { sendChatMessage, formatWinMessage, shouldAnnounce } from '../utils/chatBot';
+import { sendChatMessage, formatWinMessage } from '../utils/chatBot';
 import { reportSpin } from '../utils/leaderboardApi';
 import { contributeToJackpot, winJackpot } from '../utils/jackpotApi';
 import WinShareOverlay from './WinShareOverlay';
@@ -29,12 +29,11 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
   const [autoSpin, setAutoSpin] = useState(false);
   const [turbo, setTurbo] = useState(false);
 
-  // Bonus stages: none → picker → (wheel → freespins) | vault
-  const [bonusStage, setBonusStage] = useState('none'); // none|picker|wheel|freespins|vault
+  const [bonusStage, setBonusStage] = useState('none');
   const [bonusMultiplier, setBonusMultiplier] = useState(1);
   const [bonusSpinsLeft, setBonusSpinsLeft] = useState(0);
   const [bonusBet, setBonusBet] = useState(0);
-  const [shareWin, setShareWin] = useState(null); // { amount, multiplier, game }
+  const [shareWin, setShareWin] = useState(null);
 
   const stoppedReels = useRef(0);
   const currentResults = useRef([]);
@@ -66,7 +65,7 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     if (!inFreeSpins) {
       let currentBalance = balance;
       try {
-        const fresh = await fetchPoints(username);
+        const fresh = await fetchPoints();
         setBalance(fresh);
         currentBalance = fresh;
       } catch {}
@@ -92,7 +91,7 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
     if (actualBet > 0) {
       try {
-        const deductResult = await deductPoints(username, actualBet, 'slots');
+        const deductResult = await deductBet('slots', actualBet);
         betIdRef.current = deductResult.betId;
       } catch {
         setBalance(prev => prev + actualBet);
@@ -113,12 +112,10 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     }
   }, [spinning, inOverlay, inFreeSpins, bet, balance, username, showToast, setBalance]);
 
-  // Stage 1: Bonus picker result → route to game
   const handlePickerResult = useCallback((game) => {
     setBonusStage(game === 'freespins' ? 'wheel' : game);
   }, []);
 
-  // Stage 2a: Wheel result → free spins
   const handleWheelResult = useCallback((multiplier) => {
     setBonusMultiplier(multiplier);
     setBonusStage('freespins');
@@ -126,14 +123,12 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     showToast(`${Math.floor(multiplier)}x multiplier! ${BONUS_SPINS} free spins!`, 'bonus');
   }, [showToast]);
 
-  // Generic bonus game complete — all instant-payout bonus games use this
   const handleBonusGameComplete = useCallback((totalMultiplier, gameName, emoji) => {
     const payout = Math.floor(baseBetRef.current * totalMultiplier);
     if (payout > 0) {
       setBalance(prev => prev + payout);
-      addPoints(username, payout, 'slots', betIdRef.current).catch(() => {});
+      settleBet(betIdRef.current, payout).catch(() => {});
       showToast(`${gameName}: ${totalMultiplier}x — +${payout.toLocaleString()} pts!`, payout > baseBetRef.current * 5 ? 'mega' : 'win');
-      // Show share overlay for bonus wins
       setShareWin({ amount: payout, multiplier: totalMultiplier, game: `Slots — ${gameName}` });
     } else {
       showToast(`${gameName}: ${totalMultiplier}x — no win`, 'error');
@@ -153,7 +148,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
       const res = currentResults.current;
 
-      // Bonus trigger → picker wheel
       if (isBonusTriggered(res)) {
         audio.bonus();
         setAutoSpin(false);
@@ -164,7 +158,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
 
       const winResult = evaluateWin(res, bet, jackpot);
 
-      // Apply free spins multiplier
       if (inFreeSpins && winResult.winAmount > 0) {
         winResult.winAmount = Math.floor(winResult.winAmount * bonusMultiplier);
         winResult.label += ` (${bonusMultiplier}x Bonus)`;
@@ -176,12 +169,11 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
           if (data) {
             const jackpotWin = inFreeSpins ? Math.floor(data.won * bonusMultiplier) : data.won;
             setBalance(prev => prev + jackpotWin);
-            addPoints(username, jackpotWin, 'slots', betIdRef.current).catch(() => {});
+            settleBet(betIdRef.current, jackpotWin).catch(() => {});
             setJackpot(data.jackpot);
             setLastWin({ ...winResult, amount: jackpotWin });
             addHistory(res, jackpotWin, 'jackpot');
             showToast(`JACKPOT! +${jackpotWin.toLocaleString()} pts!`, 'jackpot');
-            // Jackpot always auto-announces
             const siteUrl = window.location.origin;
             sendChatMessage(formatWinMessage(username, jackpotWin, null, 'jackpot', siteUrl));
             setShareWin({ amount: jackpotWin, multiplier: jackpotWin / bet, game: 'Slots — JACKPOT' });
@@ -191,13 +183,12 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
       } else if (winResult.winAmount > 0) {
         audio.win(winResult.multiplier);
         setBalance(prev => prev + winResult.winAmount);
-        addPoints(username, winResult.winAmount, 'slots', betIdRef.current).catch(() => {});
+        settleBet(betIdRef.current, winResult.winAmount).catch(() => {});
         setLastWin({ ...winResult, amount: winResult.winAmount });
         const effectiveMult = inFreeSpins ? winResult.multiplier * bonusMultiplier : winResult.multiplier;
         const winType = effectiveMult >= 25 ? 'mega' : effectiveMult >= 10 ? 'big' : 'win';
         addHistory(res, winResult.winAmount - (inFreeSpins ? 0 : bet), winType === 'mega' ? 'mega' : 'win');
         showToast(`+${winResult.winAmount.toLocaleString()} pts!`, winType === 'mega' ? 'mega' : 'win');
-        // Show share overlay for big wins (5x+), not during free spins (wait for bonus end)
         if (!inFreeSpins && effectiveMult >= 5) {
           setShareWin({ amount: winResult.winAmount, multiplier: effectiveMult, game: 'Slots' });
         }
@@ -222,7 +213,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
         setNearMiss(true);
       }
 
-      // Free spins countdown
       if (inFreeSpins) {
         setBonusSpinsLeft(prev => {
           const next = prev - 1;
@@ -241,7 +231,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     handleSpin(true);
   }, [handleSpin]);
 
-  // Autospin
   useEffect(() => {
     if (!autoSpinRef.current || spinning || inOverlay) return;
     const canAutoSpin = inFreeSpins ? bonusSpinsLeft > 0 : balance >= bet;
@@ -256,7 +245,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
     return () => clearTimeout(timer);
   }, [spinning, autoSpin, inOverlay, inFreeSpins, bonusSpinsLeft, balance, bet, turbo, handleSpin]);
 
-  // Keyboard
   useEffect(() => {
     const handler = (e) => {
       if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
@@ -315,7 +303,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
         onTurboToggle={() => setTurbo(prev => !prev)}
       />
 
-      {/* Bonus overlays */}
       <AnimatePresence>
         {bonusStage === 'picker' && <BonusPicker onResult={handlePickerResult} />}
         {bonusStage === 'wheel' && <BonusWheel onResult={handleWheelResult} />}
@@ -324,7 +311,6 @@ export default function SlotMachine({ balance, setBalance, username, jackpot, se
         {bonusStage === 'scratch' && <ScratchCard bet={baseBetRef.current} onComplete={(mult) => handleBonusGameComplete(mult, 'Scratch Card', '🎟️')} />}
       </AnimatePresence>
 
-      {/* Win share overlay */}
       <AnimatePresence>
         {shareWin && (
           <WinShareOverlay

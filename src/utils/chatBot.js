@@ -1,10 +1,10 @@
-// Chat messages go through /api/chat serverless function.
+import { authHeaders } from './api';
 
 export async function sendChatMessage(message) {
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify({ message }),
     });
     return res.ok;
@@ -31,11 +31,6 @@ export function formatWinMessage(username, amount, multiplier, type, siteUrl) {
   return msg;
 }
 
-// Announce thresholds — avoid chat spam
-// Under 500: never (too small to care)
-// 500-999: only 25x+ hits
-// 1000+: 10x+ hits
-// Always: jackpots
 export function shouldAnnounce(winAmount, bet, type) {
   if (type === 'jackpot') return true;
   const multiplier = bet > 0 ? winAmount / bet : 0;

@@ -1,9 +1,11 @@
+import { authHeaders } from './api';
+
 export async function reportSpin(username, wagered, won) {
   try {
     await fetch('/api/leaderboard', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, wagered, won }),
+      headers: authHeaders(),
+      body: JSON.stringify({ wagered, won }),
     });
   } catch {}
 }

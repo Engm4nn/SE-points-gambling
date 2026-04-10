@@ -60,7 +60,7 @@ export default function CoinFlip({ balance, setBalance, username, showToast, add
     setBusy(true);
 
     try {
-      const fresh = await fetchPoints(username);
+      const fresh = await fetchPoints();
       setBalance(fresh);
       if (fresh < bet) {
         setBusy(false);
@@ -73,7 +73,7 @@ export default function CoinFlip({ balance, setBalance, username, showToast, add
     await audio.ensure();
 
     try {
-      const data = await coinflipStart(username, bet, choice);
+      const data = await coinflipStart(bet, choice);
       originalBetRef.current = bet;
 
       setResult(data.result);
@@ -89,7 +89,7 @@ export default function CoinFlip({ balance, setBalance, username, showToast, add
       setBusy(false);
       showToast(err.message || 'Flip failed', 'error');
     }
-  }, [busy, choice, bet, username, setBalance, showToast]);
+  }, [busy, choice, bet, setBalance, showToast]);
 
   const handleFlipComplete = useCallback(async () => {
     if (phase !== PHASES.FLIPPING) return;
@@ -137,13 +137,13 @@ export default function CoinFlip({ balance, setBalance, username, showToast, add
   const handleCashOut = useCallback(async () => {
     if (!betIdRef.current) return;
     try {
-      const data = await coinflipCashout(betIdRef.current, username);
+      const data = await coinflipCashout(betIdRef.current);
       setBalance((prev) => prev + data.payout);
     } catch (err) {
       showToast(err.message || 'Cashout failed', 'error');
     }
     handleNewGame();
-  }, [username, setBalance, showToast]);
+  }, [setBalance, showToast]);
 
   const handleDoubleOrNothing = useCallback(async () => {
     if (busy || !betIdRef.current) return;
@@ -151,7 +151,7 @@ export default function CoinFlip({ balance, setBalance, username, showToast, add
     await audio.ensure();
 
     try {
-      const data = await coinflipDouble(betIdRef.current, username);
+      const data = await coinflipDouble(betIdRef.current);
       setResult(data.result);
       setWon(data.won);
       potRef.current = data.pot;
@@ -164,13 +164,13 @@ export default function CoinFlip({ balance, setBalance, username, showToast, add
       showToast(err.message || 'Double failed', 'error');
       if (err.message?.includes('expired')) {
         try {
-          const fresh = await fetchPoints(username);
+          const fresh = await fetchPoints();
           setBalance(fresh);
         } catch {}
         handleNewGame();
       }
     }
-  }, [busy, username, setBalance, showToast]);
+  }, [busy, setBalance, showToast]);
 
   const handleNewGame = () => {
     setPhase(PHASES.IDLE);

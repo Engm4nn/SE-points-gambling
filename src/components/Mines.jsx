@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { deductPoints, addPoints, fetchPoints } from '../utils/api';
+import { deductBet, settleBet, fetchPoints } from '../utils/api';
 import { reportSpin } from '../utils/leaderboardApi';
 import { generateMines, getMultiplier, getNextMultiplier, getSafeChance, MINE_PRESETS, GRID_SIZE } from '../utils/minesLogic';
 import { MIN_BET, BET_PRESETS } from '../utils/constants';
@@ -28,7 +28,7 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
     {
       let currentBalance = balance;
       try {
-        const fresh = await fetchPoints(username);
+        const fresh = await fetchPoints();
         setBalance(fresh);
         currentBalance = fresh;
       } catch {}
@@ -40,7 +40,7 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
     setBalance(prev => prev - bet);
 
     try {
-      const deductResult = await deductPoints(username, bet, 'mines');
+      const deductResult = await deductBet('mines', bet);
       betIdRef.current = deductResult.betId;
     } catch {
       setBalance(prev => prev + bet);
@@ -54,7 +54,7 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
     setHitMine(null);
     setCurrentMultiplier(1);
     setPhase(PHASES.PLAYING);
-  }, [balance, bet, mineCount, username, setBalance, showToast]);
+  }, [balance, bet, mineCount, setBalance, showToast]);
 
   const handleReveal = useCallback((index) => {
     if (phase !== PHASES.PLAYING || revealed.has(index)) return;
@@ -86,7 +86,7 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
       if (newRevealed.size === GRID_SIZE - mineCount) {
         const payout = Math.floor(betRef.current * mult);
         setBalance(prev => prev + payout);
-        addPoints(username, payout, 'mines', betIdRef.current).catch(() => {});
+        settleBet(betIdRef.current, payout).catch(() => {});
         setPhase(PHASES.RESULT);
         audio.win(mult);
         reportSpin(username, betRef.current, payout);
@@ -107,7 +107,7 @@ export default function Mines({ balance, setBalance, username, showToast, addHis
 
     const payout = Math.floor(betRef.current * currentMultiplier);
     setBalance(prev => prev + payout);
-    addPoints(username, payout, 'mines', betIdRef.current).catch(() => {});
+    settleBet(betIdRef.current, payout).catch(() => {});
     setPhase(PHASES.RESULT);
     audio.win(currentMultiplier);
     reportSpin(username, betRef.current, payout);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { parseAuthCallback, getTwitchUser } from '../utils/twitch';
-import { fetchPoints } from '../utils/api';
+import { authenticate, fetchPoints } from '../utils/api';
 import { Disc3 } from 'lucide-react';
 
 export default function AuthCallback({ onLogin }) {
@@ -17,9 +17,12 @@ export default function AuthCallback({ onLogin }) {
       }
 
       try {
-        const user = await getTwitchUser(token);
-        const points = await fetchPoints(user.login);
-        onLogin(user.login, points, user.displayName, user.profileImage);
+        const twitchUser = await getTwitchUser(token);
+
+        await authenticate(token);
+
+        const points = await fetchPoints();
+        onLogin(twitchUser.login, points, twitchUser.displayName, twitchUser.profileImage);
         navigate('/', { replace: true });
       } catch (err) {
         setError('Login failed. Please try again.');
